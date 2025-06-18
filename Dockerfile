@@ -11,33 +11,28 @@ RUN apk add --no-cache \
     fuse \
     ca-certificates # Essential for curl to work with HTTPS
 
-# Install rclone from pre-compiled binary for Alpine
-# This fetches the latest stable release and installs it.
-# Using a specific, known-good version is often more stable for Docker builds.
-# You can update RCLONE_VERSION manually periodically.
-ENV RCLONE_VERSION 1.66.0 # <--- IMPORTANT: Set the desired Rclone version here
-
+# Install rclone using the "current" link for the latest stable version
 RUN set -eux; \
-    # Download the rclone zip archive
-    curl -o /tmp/rclone-download.zip "https://downloads.rclone.org/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip"; \
+    # Download the latest rclone zip archive
+    curl -O https://downloads.rclone.org/rclone-current-linux-amd64.zip; \
     \
     # Create a temporary directory for extraction
     mkdir -p /tmp/rclone-extracted; \
     \
-    # Extract the zip file into the temporary directory
-    unzip -q /tmp/rclone-download.zip -d /tmp/rclone-extracted/; \
+    # Unzip the file into the temporary directory
+    unzip -q rclone-current-linux-amd64.zip -d /tmp/rclone-extracted/; \
     \
-    # Find the extracted rclone executable (its path inside the zip can vary slightly with versions)
-    # This finds the 'rclone' executable anywhere inside the extracted folder structure
+    # Find the extracted rclone executable (its path inside the zip can vary slightly)
+    # The find command is robust against changes in the extracted directory name (e.g., rclone-vX.Y.Z-linux-amd64)
     find /tmp/rclone-extracted -type f -name "rclone" -exec mv {} /usr/bin/ \; ; \
     \
     # Clean up temporary files and directories
-    rm -rf /tmp/rclone-download.zip /tmp/rclone-extracted; \
+    rm -rf rclone-current-linux-amd64.zip /tmp/rclone-extracted; \
     \
     # Make rclone executable
     chmod +x /usr/bin/rclone; \
     \
-    # Verify rclone installation (optional, but good for debugging build issues)
+    # Verify rclone installation
     rclone version
 
 # Set the working directory in the container
