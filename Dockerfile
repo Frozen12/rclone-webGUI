@@ -13,14 +13,32 @@ RUN apk add --no-cache \
 
 # Install rclone from pre-compiled binary for Alpine
 # This fetches the latest stable release and installs it.
+# Using a specific, known-good version is often more stable for Docker builds.
+# You can update RCLONE_VERSION manually periodically.
+ENV RCLONE_VERSION 1.66.0 # <--- IMPORTANT: Set the desired Rclone version here
+
 RUN set -eux; \
-    RCLONE_VERSION=$(curl -s https://downloads.rclone.org/version.txt); \
-    mkdir -p /tmp/rclone-download; \
-    curl -o /tmp/rclone-download/rclone.zip "https://downloads.rclone.org/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip"; \
-    unzip -q /tmp/rclone-download/rclone.zip -d /tmp/rclone-download/; \
-    mv /tmp/rclone-download/rclone-v${RCLONE_VERSION}-linux-amd64/rclone /usr/bin/; \
-    rm -rf /tmp/rclone-download; \
-    chmod +x /usr/bin/rclone
+    # Download the rclone zip archive
+    curl -o /tmp/rclone-download.zip "https://downloads.rclone.org/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip"; \
+    \
+    # Create a temporary directory for extraction
+    mkdir -p /tmp/rclone-extracted; \
+    \
+    # Extract the zip file into the temporary directory
+    unzip -q /tmp/rclone-download.zip -d /tmp/rclone-extracted/; \
+    \
+    # Find the extracted rclone executable (its path inside the zip can vary slightly with versions)
+    # This finds the 'rclone' executable anywhere inside the extracted folder structure
+    find /tmp/rclone-extracted -type f -name "rclone" -exec mv {} /usr/bin/ \; ; \
+    \
+    # Clean up temporary files and directories
+    rm -rf /tmp/rclone-download.zip /tmp/rclone-extracted; \
+    \
+    # Make rclone executable
+    chmod +x /usr/bin/rclone; \
+    \
+    # Verify rclone installation (optional, but good for debugging build issues)
+    rclone version
 
 # Set the working directory in the container
 WORKDIR /app
