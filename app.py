@@ -9,22 +9,29 @@ from datetime import datetime, timedelta
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16) # For session management
 
+# --- ADJUSTMENT START ---
+# Define the Rclone configuration base directory directly within the app's structure
+# This path is absolute and fixed, suitable for both Docker (where /app exists)
+# and potentially for direct deployment IF you ensure /app/.config/rclone is writable.
+RCLONE_BASE_CONFIG_DIR = '/app/.config/rclone'
+
 # Environment variables for Rclone (will be set before execution)
 RCLONE_ENV = {
-    'RCLONE_CONFIG': '/app/.config/rclone/rclone.conf',
+    'RCLONE_CONFIG': os.path.join(RCLONE_BASE_CONFIG_DIR, 'rclone.conf'),
     'RCLONE_FAST_LIST': 'true',
     'RCLONE_DRIVE_TPSLIMIT': '3',
     'RCLONE_DRIVE_ACKNOWLEDGE_ABUSE': 'true',
-    'RCLONE_LOG_FILE': '/app/rclone_Transfer.txt', # Changed path to /app for consistency
+    'RCLONE_LOG_FILE': os.path.join(os.getcwd(), 'rclone_Transfer.txt'), # Log in the application's current working directory
     'RCLONE_VERBOSE': '1',
     'RCLONE_DRIVE_PACER_MIN_SLEEP': '75ms',
     'RCLONE_DRIVE_PACER_BURST': '2',
     'RCLONE_SERVER_SIDE_ACROSS_CONFIGS': 'true'
 }
 
-# Ensure Rclone config directory exists
-os.makedirs('/app/.config/rclone', exist_ok=True)
-os.makedirs('/app/.config/rclone/sa-accounts', exist_ok=True)
+# Ensure Rclone config directory and SA directory exist
+os.makedirs(RCLONE_BASE_CONFIG_DIR, exist_ok=True)
+os.makedirs(os.path.join(RCLONE_BASE_CONFIG_DIR, 'sa-accounts'), exist_ok=True)
+# --- ADJUSTMENT END ---
 
 # --- Authentication ---
 @app.route('/login', methods=['GET', 'POST'])
@@ -38,7 +45,6 @@ def login():
 
         if username == LOGIN_USERNAME and password == LOGIN_PASSWORD:
             resp = make_response(redirect(url_for('index')))
-            # Set a simple cookie to remember login. For production, consider signed cookies/sessions.
             resp.set_cookie('logged_in', 'true', expires=datetime.now() + timedelta(days=7))
             return resp
         else:
@@ -72,15 +78,15 @@ def upload_sa_zip():
     if file.filename == '':
         return jsonify({'status': 'error', 'message': 'No selected file'}), 400
     if file:
-        sa_zip_path = '/app/.config/rclone/sa-accounts.zip'
+        sa_accounts_dir = os.path.join(RCLONE_BASE_CONFIG_DIR, 'sa-accounts')
+        sa_zip_path = os.path.join(sa_accounts_dir, 'sa-accounts.zip')
         file.save(sa_zip_path)
         try:
-            # Clear existing SA files
-            for f in os.listdir('/app/.config/rclone/sa-accounts'):
+            for f in os.listdir(sa_accounts_dir):
                 if f.endswith('.json'):
-                    os.remove(os.path.join('/app/.config/rclone/sa-accounts', f))
+                    os.remove(os.path.join(sa_accounts_dir, f))
             
-            subprocess.run(['unzip', '-qq', '-o', sa_zip_path, '-d', '/app/.config/rclone/sa-accounts/'], check=True)
+            subprocess.run(['unzip', '-qq', '-o', sa_zip_path, '-d', sa_accounts_dir], check=True)
             return jsonify({'status': 'success', 'message': 'Service Account ZIP extracted successfully'})
         except subprocess.CalledProcessError as e:
             return jsonify({'status': 'error', 'message': f'Failed to extract SA ZIP: {e}'}), 500
@@ -105,30 +111,27 @@ def execute_rclone():
     service_account = data.get('service_account')
     dry_run = data.get('dry_run')
 
-    # Construct the Rclone command
     transfersC = f"--transfers={transfers}"
     checkersC = f"--checkers={checkers}"
     bufferS = f"--buffer-size={buffer_size}"
-    driveCS = f"--drive-chunk-size={buffer_size}" # Using buffer_size for drive-chunk-size
+    driveCS = f"--drive-chunk-size={buffer_size}" 
 
     driveT = "--drive-use-trash=true" if use_drive_trash else "--drive-use-trash=false"
 
     serviceA_flag = ""
     if service_account:
-        # Get a random SA file
-        sa_files = [f for f in os.listdir('/app/.config/rclone/sa-accounts') if f.endswith('.json')]
+        sa_accounts_dir = os.path.join(RCLONE_BASE_CONFIG_DIR, 'sa-accounts')
+        sa_files = [f for f in os.listdir(sa_accounts_dir) if f.endswith('.json')]
         if sa_files:
-            # Use a simple hash based on current time or PID for selection
             MIXURE = str((os.getpid() + int(time.time())) % len(sa_files)) if sa_files else '0'
-            # Simple way to pick one, could be more robust
-            selected_sa = os.path.join('/app/.config/rclone/sa-accounts', sa_files[int(MIXURE) % len(sa_files)])
+            selected_sa = os.path.join(sa_accounts_dir, sa_files[int(MIXURE) % len(sa_files)])
             serviceA_flag = f"--drive-service-account-file={selected_sa}"
         else:
-            return jsonify({'status': 'error', 'message': 'No service account files found in /app/.config/rclone/sa-accounts'}), 400
+            return jsonify({'status': 'error', 'message': f'No service account files found in {RCLONE_BASE_CONFIG_DIR}/sa-accounts'}), 400
     else:
-        serviceA_flag = "--s3-no-head" # This flag is from the original script, it might not be relevant if not using S3
+        serviceA_flag = "--s3-no-head"
 
-    dryR = "--dry-run" if dry_run else "--s3-no-head-object" # Again, s3 flag
+    dryR = "--dry-run" if dry_run else "--s3-no-head-object"
 
     loglevel_map = {"ERROR ": "0", "Info ": "1", "DEBUG": "2"}
     verbose_level = loglevel_map.get(loglevel.strip(), "1")
@@ -148,21 +151,19 @@ def execute_rclone():
         driveCS,
         driveT,
         "--order-by", order,
-        "--max-transfer=749G", # Hardcoded from script
-        "--cutoff-mode=SOFT",  # Hardcoded from script
-        "--drive-acknowledge-abuse", # Hardcoded from script
+        "--max-transfer=749G",
+        "--cutoff-mode=SOFT",
+        "--drive-acknowledge-abuse",
         serviceA_flag,
         dryR
     ])
 
     try:
-        # Clear previous log file before starting a new transfer
         if os.path.exists(RCLONE_ENV['RCLONE_LOG_FILE']):
             os.remove(RCLONE_ENV['RCLONE_LOG_FILE'])
 
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, bufsize=1, env=os.environ.copy())
         
-        # Read output in a non-blocking way and send to frontend
         def generate():
             yield json.dumps({"status": "start", "message": "Transfer started."}) + "\\n"
             
@@ -177,13 +178,12 @@ def execute_rclone():
                     if len(lines_buffer) > 30:
                         lines_buffer.pop(0)
                     
-                    # Send updates to client
                     yield json.dumps({
                         "status": "progress",
                         "output": "\\n".join(lines_buffer),
                         "latest_line": line
                     }) + "\\n"
-                time.sleep(0.1) # Small delay to prevent too frequent updates
+                time.sleep(0.1)
 
             process.wait()
             if process.returncode == 0:
@@ -209,7 +209,6 @@ def index():
     return render_template('index.html')
 
 if __name__ == '__main__':
-    # Set Rclone environment variables
     for key, value in RCLONE_ENV.items():
         os.environ[key] = value
     
