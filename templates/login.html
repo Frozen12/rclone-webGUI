@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Rclone WebGUI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8FAF8; /* Whitish-green background */
+        }
+        .card {
+            background-color: white;
+            border-radius: 1.5rem; /* More rounded */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .btn-primary {
+            background-color: #4CAF50; /* Green */
+            color: white;
+            border-radius: 0.75rem; /* Rounded */
+            transition: background-color 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #45a049; /* Darker green on hover */
+        }
+        .input-field {
+            border-radius: 0.75rem; /* Rounded */
+            border-color: #D1D5DB; /* Light gray border */
+            padding: 0.75rem 1rem;
+            transition: border-color 0.3s ease;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #4CAF50; /* Green on focus */
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3); /* Green glow */
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen text-gray-800">
+    <div class="card p-8 max-w-sm w-full mx-4">
+        <h2 class="text-3xl font-bold text-center text-gray-900 mb-8">Login</h2>
+        {% if error %}
+            <p class="text-red-500 text-center mb-4">{{ error }}</p>
+        {% endif %}
+        <form action="/login" method="POST" class="space-y-6">
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <input type="text" id="username" name="username" required
+                       class="input-field w-full text-gray-900 focus:ring focus:ring-green-300">
+            </div>
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input type="password" id="password" name="password" required
+                       class="input-field w-full text-gray-900 focus:ring focus:ring-green-300">
+            </div>
+            <button type="submit" class="btn-primary w-full py-2.5 text-lg font-semibold">Log In</button>
+        </form>
+    </div>
+</body>
+</html>

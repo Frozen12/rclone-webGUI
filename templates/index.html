@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rclone WebGUI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8FAF8; /* Whitish-green background */
+            color: #374151; /* Darker gray for text */
+        }
+        .container-fluid {
+            padding: 1.5rem; /* Padding for the main container */
+        }
+        .card {
+            background-color: white;
+            border-radius: 1.5rem; /* More rounded */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        label {
+            font-weight: 500;
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #1F2937; /* Darker gray for labels */
+        }
+        input[type="text"], input[type="number"], select {
+            border-radius: 0.75rem; /* Rounded */
+            border: 1px solid #D1D5DB; /* Light gray border */
+            padding: 0.75rem 1rem;
+            width: 100%;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            background-color: #F9FAFB; /* Slightly off-white background */
+        }
+        input[type="text"]:focus, input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: #4CAF50; /* Green on focus */
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3); /* Green glow */
+        }
+        .slider-container input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #D1D5DB;
+            border-radius: 5px;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+        }
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 0 0 2px #4CAF50;
+        }
+        .slider-container input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 0 0 2px #4CAF50;
+        }
+
+        .btn-action {
+            background-color: #4CAF50; /* Green */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem; /* Rounded */
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+        .btn-action:hover {
+            background-color: #45a049; /* Darker green */
+        }
+        .btn-secondary {
+            background-color: #6B7280; /* Gray */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+        .btn-secondary:hover {
+            background-color: #4B5563; /* Darker gray */
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+            background-color: #4CAF50;
+        }
+        input:focus + .toggle-slider {
+            box-shadow: 0 0 1px #4CAF50;
+        }
+        input:checked + .toggle-slider:before {
+            -webkit-transform: translateX(26px);
+            -ms-transform: translateX(26px);
+            transform: translateX(26px);
+        }
+
+        /* Output specific styles */
+        .output-box {
+            background-color: #F0FDF4; /* Lighter whitish-green */
+            border: 1px solid #D1FAE5; /* Light green border */
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            font-family: monospace;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            max-height: 400px; /* Limit height for live output */
+            color: #1F2937;
+        }
+        .error-message {
+            color: #EF4444; /* Red for errors */
+            font-weight: 600;
+        }
+        .success-message {
+            color: #10B981; /* Green for success */
+            font-weight: 600;
+        }
+
+        /* Responsive layout */
+        @media (min-width: 1024px) { /* Desktop */
+            .main-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="p-6">
+    <div class="container-fluid max-w-7xl mx-auto main-grid lg:grid lg:gap-6">
+        <div class="webgui-section mb-6 lg:mb-0">
+            <div class="card p-6">
+                <h1 class="text-4xl font-bold text-center text-gray-900 mb-8">Rclone Dual Parameter Command</h1>
+                <form id="rcloneForm" class="space-y-6">
+                    <div class="form-group">
+                        <label for="source">Source:</label>
+                        <input type="text" id="source" name="source" class="input-field" value="" placeholder="e.g., ssd1:pcv" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="destination">Destination:</label>
+                        <input type="text" id="destination" name="destination" class="input-field" value="" placeholder="e.g., pcv" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="mode">Mode:</label>
+                        <select id="mode" name="mode" class="input-field">
+                            <option value="copy" selected>copy</option>
+                            <option value="sync">sync</option>
+                            <option value="move">move</option>
+                            <option value="copyurl">copyurl</option>
+                            <option value="copyto">copyto</option>
+                            <option value="moveto">moveto</option>
+                            <option value="bisync">bisync</option>
+                            <option value="check">check</option>
+                            <option value="cryptcheck">cryptcheck</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group slider-container">
+                        <label for="transfers">Transfers: <span id="transfersValue" class="font-normal text-gray-600">2</span></label>
+                        <input type="range" id="transfers" name="transfers" min="1" max="20" value="2">
+                    </div>
+
+                    <div class="form-group slider-container">
+                        <label for="checkers">Checkers: <span id="checkersValue" class="font-normal text-gray-600">4</span></label>
+                        <input type="range" id="checkers" name="checkers" min="1" max="20" value="4">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="buffer_size">Buffer Size:</label>
+                        <select id="buffer_size" name="buffer_size" class="input-field">
+                            <option value="2M">2M</option>
+                            <option value="4M">4M</option>
+                            <option value="16M">16M</option>
+                            <option value="32M">32M</option>
+                            <option value="64M">64M</option>
+                            <option value="128M" selected>128M</option>
+                            <option value="256M">256M</option>
+                            <option value="512M">512M</option>
+                            <option value="1024M">1024M</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order">Order By:</label>
+                        <select id="order" name="order" class="input-field">
+                            <option value="size,ascending">size,ascending</option>
+                            <option value="size,descending">size,descending</option>
+                            <option value="size,mixed,75">size,mixed,75</option>
+                            <option value="size,mixed,50" selected>size,mixed,50</option>
+                            <option value="size,mixed,25">size,mixed,25</option>
+                            <option value="size,mixed,10">size,mixed,10</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="loglevel">Log Level:</label>
+                        <select id="loglevel" name="loglevel" class="input-field">
+                            <option value="ERROR ">ERROR</option>
+                            <option value="Info " selected>Info</option>
+                            <option value="DEBUG">DEBUG</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="additional_flags">Additional Flags:</label>
+                        <input type="text" id="additional_flags" name="additional_flags" class="input-field" value="--azureblob-env-auth --crypt-pass-bad-blocks">
+                    </div>
+
+                    <div class="flex items-center justify-between mt-6">
+                        <div class="flex items-center space-x-4">
+                            <label for="use_drive_trash" class="text-gray-700 font-medium">Use Drive Trash:</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="use_drive_trash" name="use_drive_trash">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <label for="service_account" class="text-gray-700 font-medium">Use Service Account:</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="service_account">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <label for="dry_run" class="text-gray-700 font-medium">Dry Run:</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="dry_run">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 pt-6 border-t border-gray-200">
+                        <div class="mb-4">
+                            <button type="button" id="toggleRcloneConf" class="btn-secondary w-full">Upload rclone.conf</button>
+                            <div id="rcloneConfUpload" class="hidden mt-4 p-4 border border-gray-300 rounded-xl">
+                                <input type="file" id="rcloneConfFile" accept=".conf" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
+                                <button type="button" id="uploadRcloneConfBtn" class="btn-action mt-3 w-full">Upload</button>
+                                <p id="rcloneConfStatus" class="mt-2 text-sm text-center"></p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <button type="button" id="toggleSaZip" class="btn-secondary w-full">Upload Service Account ZIP</button>
+                            <div id="saZipUpload" class="hidden mt-4 p-4 border border-gray-300 rounded-xl">
+                                <input type="file" id="saZipFile" accept=".zip" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
+                                <button type="button" id="uploadSaZipBtn" class="btn-action mt-3 w-full">Upload</button>
+                                <p id="saZipStatus" class="mt-2 text-sm text-center"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-action w-full mt-8">Start Rclone Transfer</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="output-section">
+            <div class="card p-6">
+                <h2 class="text-3xl font-bold text-center text-gray-900 mb-6">Output</h2>
+
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3">📋 Live Command Preview:</h3>
+                    <div id="commandPreview" class="output-box bg-gray-50 text-gray-700 overflow-x-auto text-sm">
+                        <p class="text-gray-500">Fill the form to see the command...</p>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3">🚀 Major Steps/Error:</h3>
+                    <div id="majorStepsOutput" class="output-box bg-green-50 border-green-200">
+                        </div>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3">💠 Live Terminal Output (Last 30 lines):</h3>
+                    <div id="liveOutput" class="output-box bg-gray-900 text-green-300">
+                        </div>
+                </div>
+
+                <div class="mt-8">
+                    <a href="/download-logs" id="downloadLogsBtn" class="btn-secondary w-full text-center block" download style="display: none;">Download Rclone Logs</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

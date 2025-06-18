@@ -1,0 +1,8 @@
+/* This file can be used for custom CSS or for Tailwind JIT/build output */
+/* For simplicity, we are using Tailwind CDN directly in HTML templates. */
+/* If you want to build Tailwind locally, you would compile your Tailwind
+   classes into this file. Example for a build:
+   @tailwind base;
+   @tailwind components;
+   @tailwind utilities;
+*/
