@@ -3,565 +3,294 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Rclone WebGUI</title>
+    <title>Rclone WebGUI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            transition: background-color 0.3s, color 0.3s;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            overflow: hidden; /* Hide overflow for background shapes */
-            position: relative;
-        }
-        :root {
-            /* Default Greenish White Monochromatic (Dark Mode) */
-            --primary-color: #DCE7DC; /* Lighter greenish-white for text */
-            --accent-color: #558B55; /* Muted vibrant green */
-            --bg-color: #1A2A1A; /* Dark background */
-            --card-bg-color: #2D402D; /* Darker card background for contrast */
-            --text-color: #DCE7DC; /* General text color */
-            --border-color: #4A6B4A; /* Darker green border for definition */
-            --input-bg-color: #3C503C; /* Slightly lighter input background */
-            --button-bg-color: #6AA66A; /* Brighter button green */
-            --button-text-color: #1A2A1A; /* Dark text for light buttons */
-            --success-color: #4CAF50;
-            --error-color: #E53935; /* Stronger red for errors */
-            --warning-color: #FFB300; /* Amber for warnings */
+</head>
+<body class="flex flex-col min-h-screen">
+    <!-- Header -->
+    <header class="bg-card-bg-color p-4 shadow-md flex flex-wrap justify-between items-center rounded-b-xl top-0 z-10 border-b border-border-color header-visible">
+        <div class="flex items-center">
+            <svg class="h-8 w-8 text-accent-color mr-3" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zm-1 2.5V9h5.5zM12 18l-4-4h3V9h2v5h3l-4 4z"/>
+            </svg>
+            <h1 class="text-3xl font-bold app-title">Rclone WebGUI</h1>
+        </div>
+        <div class="flex items-center space-x-4 mt-2 md:mt-0">
+            <!-- Theme Changer Dropdown -->
+            <div class="relative inline-block text-left">
+                <button type="button" id="themeChangerBtn" class="btn-secondary px-4 py-2 rounded-lg text-sm font-medium focus:outline-none flex items-center">
+                    <i class="fas fa-palette mr-2"></i> Themes
+                </button>
+                <div id="themeDropdown" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-card-bg-color ring-1 ring-border-color ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="themeChangerBtn">
+                    <div class="py-1" role="none">
+                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="dark-mode">Dark Green (Default)</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-blue">Blue</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-purple">Purple</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-orange">Orange</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-red">Red</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-teal">Teal</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-indigo">Indigo</a>
+                    </div>
+                </div>
+            </div>
+            <button onclick="logout()" class="btn-danger px-4 py-2 rounded-lg text-sm font-medium hover:scale-105">
+                <i class="fas fa-sign-out-alt mr-2"></i>Logout
+            </button>
+        </div>
+    </header>
 
-            /* RGB values for rgba() colors for transparent overlays */
-            --card-bg-color-rgb: 45, 64, 45;
-            --accent-color-rgb: 85, 139, 85;
-            --primary-color-rgb: 220, 231, 220;
-            --button-bg-color-rgb: 106, 166, 106;
-        }
+    <!-- Main Content Area -->
+    <main class="flex-1 container mx-auto p-4 flex flex-col lg:flex-row gap-4">
 
-        /* --- Theme definitions (muted and high contrast) --- */
-        .dark-mode { /* Default */
-            --primary-color: #DCE7DC; --accent-color: #558B55; --bg-color: #1A2A1A; --card-bg-color: #2D402D; --text-color: #DCE7DC; --border-color: #4A6B4A; --input-bg-color: #3C503C; --button-bg-color: #6AA66A; --button-text-color: #1A2A1A;
-            --card-bg-color-rgb: 45, 64, 45; --accent-color-rgb: 85, 139, 85; --primary-color-rgb: 220, 231, 220; --button-bg-color-rgb: 106, 166, 106;
-        }
-        .theme-blue {
-            --primary-color: #DDEBF0; --accent-color: #3F8FBD; --bg-color: #1A2C3D; --card-bg-color: #2D4258; --text-color: #DDEBF0; --border-color: #4A6A8C; --input-bg-color: #3C526A; --button-bg-color: #559AC7; --button-text-color: #1A2C3D;
-            --card-bg-color-rgb: 45, 66, 88; --accent-color-rgb: 63, 143, 189; --primary-color-rgb: 221, 235, 240; --button-bg-color-rgb: 85, 154, 199;
-        }
-        .theme-purple {
-            --primary-color: #E8E0EC; --accent-color: #7A50A0; --bg-color: #2E1A3D; --card-bg-color: #3F2C58; --text-color: #E8E0EC; --border-color: #5A4A7A; --input-bg-color: #4D3C6A; --button-bg-color: #9A7AA6; --button-text-color: #2E1A3D;
-            --card-bg-color-rgb: 63, 44, 88; --accent-color-rgb: 122, 80, 160; --primary-color-rgb: 232, 224, 236; --button-bg-color-rgb: 154, 122, 166;
-        }
-        .theme-orange {
-            --primary-color: #F5E9DD; --accent-color: #D07B2D; --bg-color: #3D2C1A; --card-bg-color: #58422D; --text-color: #F5E9DD; --border-color: #8C6A4A; --input-bg-color: #6A523C; --button-bg-color: #F0A055; --button-text-color: #3D2C1A;
-            --card-bg-color-rgb: 88, 66, 45; --accent-color-rgb: 208, 123, 45; --primary-color-rgb: 245, 233, 221; --button-bg-color-rgb: 240, 160, 85;
-        }
-        .theme-red {
-            --primary-color: #F0E3E3; --accent-color: #B04F4F; --bg-color: #3D1A1A; --card-bg-color: #582D2D; --text-color: #F0E3E3; --border-color: #8C4A4A; --input-bg-color: #6A3C3C; --button-bg-color: #E06A6A; --button-text-color: #3D1A1A;
-            --card-bg-color-rgb: 88, 45, 45; --accent-color-rgb: 176, 79, 79; --primary-color-rgb: 240, 227, 227; --button-bg-color-rgb: 224, 106, 106;
-        }
-        .theme-teal {
-            --primary-color: #E0EFEF; --accent-color: #3F9B9B; --bg-color: #1A3D3D; --card-bg-color: #2D5858; --text-color: #E0EFEF; --border-color: #4A8C8C; --input-bg-color: #3C6A6A; --button-bg-color: #55C7C7; --button-text-color: #1A3D3D;
-            --card-bg-color-rgb: 45, 88, 88; --accent-color-rgb: 63, 155, 155; --primary-color-rgb: 224, 239, 239; --button-bg-color-rgb: 85, 199, 199;
-        }
-        .theme-indigo {
-            --primary-color: #E3E5F0; --accent-color: #4A5CB0; --bg-color: #1A2D3D; --card-bg-color: #2D4258; --text-color: #E3E5F0; --border-color: #4A6A8C; --input-bg-color: #3C506A; --button-bg-color: #6A7BC0; --button-text-color: #1A2D3D;
-            --card-bg-color-rgb: 45, 66, 88; --accent-color-rgb: 74, 92, 176; --primary-color-rgb: 227, 229, 240; --button-bg-color-rgb: 106, 123, 192;
-        }
+        <!-- Left Column: Navigation and Sections -->
+        <aside class="w-full lg:w-1/4 space-y-4">
+            <!-- Navigation Buttons -->
+            <nav class="card p-4 rounded-xl shadow-md">
+                <ul class="space-y-3">
+                    <li><button onclick="showSection('setup')" class="nav-button"><i class="fas fa-cog mr-2"></i> Setup</button></li>
+                    <li><button onclick="showSection('rclone-transfer')" class="nav-button active"><i class="fas fa-sync-alt mr-2"></i> Rclone Transfer</button></li>
+                    <li><button onclick="showSection('web-terminal')" class="nav-button"><i class="fas fa-terminal mr-2"></i> Web Terminal</button></li>
+                    <li><button onclick="showSection('recent-commands')" class="nav-button"><i class="fas fa-history mr-2"></i> Recent Commands</button></li>
+                    <li><button onclick="showSection('notepad')" class="nav-button"><i class="fas fa-clipboard mr-2"></i> Notepad</button></li>
+                </ul>
+            </nav>
+        </aside>
 
-        .background-shapes {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
-            background: linear-gradient(135deg, var(--bg-color), var(--card-bg-color)); /* Adjusted gradient */
-        }
+        <!-- Right Column: Dynamic Content Sections -->
+        <section class="flex-1 space-y-4">
 
-        .shape-1 {
-            position: absolute;
-            top: -10%;
-            left: -10%;
-            width: 40%;
-            height: 40%;
-            background: rgba(var(--accent-color-rgb), 0.15); /* Increased opacity for shapes */
-            border-radius: 50%;
-            filter: blur(60px);
-            animation: float1 15s infinite ease-in-out alternate;
-        }
-        .shape-2 {
-            position: absolute;
-            bottom: -15%;
-            right: -15%;
-            width: 50%;
-            height: 50%;
-            background: rgba(var(--primary-color-rgb), 0.1); /* Increased opacity */
-            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-            filter: blur(70px);
-            animation: float2 20s infinite ease-in-out alternate;
-        }
-        .shape-3 {
-            position: absolute;
-            top: 20%;
-            right: 5%;
-            width: 25%;
-            height: 25%;
-            background: rgba(var(--button-bg-color-rgb), 0.2); /* Increased opacity */
-            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-            filter: blur(50px);
-            animation: float3 18s infinite ease-in-out alternate;
-        }
+            <!-- Setup Section -->
+            <div id="setup-section" class="content-section card p-6 rounded-xl shadow-md hidden">
+                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-cogs mr-3"></i> Setup</h2>
 
-        @keyframes float1 {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(20px, 30px) rotate(5deg); }
-        }
-        @keyframes float2 {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(-30px, -20px) rotate(-8deg); }
-        }
-        @keyframes float3 {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(10px, -15px) rotate(10deg); }
-        }
+                <div class="mb-6 border border-border-color rounded-lg p-4">
+                    <h3 class="text-xl font-semibold mb-3 text-accent-color">Upload rclone.conf</h3>
+                    <label class="custom-file-upload">
+                        <input type="file" id="rclone_conf_file_input" accept=".conf" name="rclone_conf_file_input" class="hidden">
+                        <span id="rclone-conf-file-name" class="file-name-display">No file chosen</span>
+                        <span class="file-button btn-secondary"><i class="fas fa-folder-open mr-2"></i> Browse</span>
+                    </label>
+                    <button onclick="uploadRcloneConf()" class="btn-primary mt-4 w-full md:w-auto"><i class="fas fa-upload mr-2"></i> Upload rclone.conf</button>
+                </div>
 
-        .card {
-            background-color: var(--card-bg-color);
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Increased shadow for better definition */
-            transition: transform 0.08s ease-out, box-shadow 0.08s ease-out; /* Reduced transition time */
-        }
-        .card:hover {
-            transform: translateY(-0.5px); /* More subtle lift */
-            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.25); /* Slightly more pronounced shadow on hover */
-        }
+                <div class="mb-6 border border-border-color rounded-lg p-4">
+                    <h3 class="text-xl font-semibold mb-3 text-accent-color">Upload Service Account (SA) ZIP</h3>
+                    <label class="custom-file-upload">
+                        <input type="file" id="sa_zip_file_input" accept=".zip" name="sa_zip_file_input" class="hidden">
+                        <span id="sa-zip-file-name" class="file-name-display">No file chosen</span>
+                        <span class="file-button btn-secondary"><i class="fas fa-folder-open mr-2"></i> Browse</span>
+                    </label>
+                    <button onclick="uploadSaZip()" class="btn-primary mt-4 w-full md:w-auto"><i class="fas fa-file-archive mr-2"></i> Upload SA ZIP</button>
+                </div>
 
-        .input-field, select.custom-select {
-            background-color: var(--input-bg-color);
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            transition: all 0.15s ease-in-out;
-        }
-        .input-field:focus, select.custom-select:focus {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.4); /* Stronger focus ring */
-            outline: none;
-        }
+                <div id="majorStepsOutput" class="major-steps-output mt-4"></div>
+            </div>
 
-        /* Button Styling */
-        .btn-primary, .btn-secondary, .btn-danger {
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.75rem;
-            font-weight: 600;
-            transition: all 0.08s ease-in-out; /* Reduced transition time */
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            cursor: pointer;
-            border: none;
-        }
+            <!-- Rclone Transfer Section -->
+            <div id="rclone-transfer-section" class="content-section card p-6 rounded-xl shadow-md active">
+                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-exchange-alt mr-3"></i> Rclone Transfer</h2>
 
-        .btn-primary {
-            background-color: var(--button-bg-color);
-            color: var(--button-text-color);
-        }
-        .btn-primary:hover {
-            background-color: var(--accent-color);
-            transform: translateY(-0.5px); /* More subtle */
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-        }
-        .btn-primary:active {
-            transform: translateY(0.5px);
-            box-shadow: none;
-        }
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label for="mode" class="block text-sm font-bold mb-2 text-primary-color">Rclone Mode</label>
+                        <select id="mode" class="input-field w-full p-3 rounded-lg custom-select">
+                            <option value="sync" data-description="Make source and destination identical." selected>sync</option>
+                            <option value="copy" data-description="Copy files from source to destination.">copy</option>
+                            <option value="move" data-description="Move files from source to destination.">move</option>
+                            <option value="copyurl" data-description="Copy a URL content to destination.">copyurl</option>
+                            <option value="check" data-description="Check files in the source match the files in the destination.">check</option>
+                            <option value="cryptcheck" data-description="Cryptcheck the vault.">cryptcheck</option>
 
-        .btn-secondary {
-            background-color: var(--input-bg-color);
-            color: var(--primary-color);
-            border: 1px solid var(--border-color);
-        }
-        .btn-secondary:hover {
-            background-color: var(--border-color);
-            transform: translateY(-0.5px); /* More subtle */
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-        }
-        .btn-secondary:active {
-            transform: translateY(0.5px);
-            box-shadow: none;
-        }
+                            <option value="lsd" data-description="List directories/containers in the path.">lsd</option>
+                            <option value="ls" data-description="List all files in the path.">ls</option>
+                            <option value="tree" data-description="List contents of remote in a tree-like fashion.">tree</option>
+                            <option value="mkdir" data-description="Create new directory.">mkdir</option>
+                            <option value="size" data-description="Counts objects and their sizes in a remote.">size</option>
+                            <option value="serve" data-description="Serve a remote over HTTP/WebDAV/FTP/etc.">serve</option>
+                            <option value="dedupe" data-description="Remove duplicate files.">dedupe</option>
+                            <option value="cleanup" data-description="Clean up the remote.">cleanup</option>
+                            <option value="checksum" data-description="Check files checksums.">checksum</option>
+                            <option value="delete" data-description="Remove files in the path.">delete</option>
+                            <option value="deletefile" data-description="Remove a single file from remote.">deletefile</option>
+                            <option value="purge" data-description="Remove all content in the path.">purge</option>
 
-        .btn-danger {
-            background-color: var(--error-color);
-            color: white;
-        }
-        .btn-danger:hover {
-            background-color: #C23A3A; /* A darker shade of red */
-            transform: translateY(-0.5px); /* More subtle */
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-        }
-        .btn-danger:active {
-            transform: translateY(0.5px);
-            box-shadow: none;
-        }
+                            <option value="listremotes" data-description="List all remotes in the config file.">listremotes</option>
+                            <option value="version" data-description="Show version and exit.">version</option>
+                        </select>
+                        <p id="mode-description" class="text-xs mt-1 text-gray-400">Make source and destination identical.</p>
+                    </div>
 
-        /* Navigation Buttons */
-        .nav-button {
-            width: 100%;
-            text-align: left;
-            padding: 1rem 1.5rem;
-            border-radius: 0.75rem;
-            background-color: transparent;
-            color: var(--text-color);
-            font-weight: 600;
-            transition: background-color 0.08s, color 0.08s, transform 0.05s; /* Reduced transition time */
-            display: flex;
-            align-items: center;
-        }
-        .nav-button:hover {
-            background-color: var(--input-bg-color);
-            color: var(--accent-color);
-            transform: translateX(1px); /* More subtle slide */
-        }
-        .nav-button.active {
-            background-color: var(--accent-color);
-            color: var(--button-text-color);
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.3); /* Slightly increased shadow for active */
-        }
-        .nav-button.active:hover {
-            background-color: var(--accent-color);
-            color: var(--button-text-color);
-            transform: none; /* No extra hover effect for active */
-        }
+                    <!-- Source Field -->
+                    <div id="source-field" class="relative">
+                        <label for="source" class="block text-sm font-bold mb-2 text-primary-color">Source Path</label>
+                        <input type="text" id="source" class="input-field w-full p-3 rounded-lg" value="">
+                    </div>
+                </div>
 
-        /* Output Areas */
-        .output-area {
-            background-color: var(--input-bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
-            padding: 1rem;
-            white-space: pre-wrap;
-            word-break: break-all;
-            overflow-y: auto;
-            font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
-            font-size: 0.875rem;
-            line-height: 1.5;
-            color: var(--primary-color);
-            max-height: 500px;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-        }
+                <!-- Destination Field (moved outside grid for better vertical grouping with source) -->
+                <div class="mb-6">
+                    <div id="destination-field">
+                        <label for="destination" class="block text-sm font-bold mb-2 text-primary-color">Destination Path</label>
+                        <input type="text" id="destination" class="input-field w-full p-3 rounded-lg" value="">
+                    </div>
+                </div>
 
-        .major-steps-output {
-            background-color: var(--input-bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
-            padding: 1rem;
-            font-weight: 500;
-            min-height: 50px;
-            overflow-y: auto;
-            max-height: 150px;
-        }
-        .major-steps-output .success { color: var(--success-color); }
-        .major-steps-output .error { color: var(--error-color); }
-        .major-steps-output .warning { color: var(--warning-color); }
-        .major-steps-output .info { color: var(--info-color); }
 
-        /* Slider Styling (Webkit/Firefox) */
-        .slider {
-            -webkit-appearance: none;
-            width: 100%;
-            height: 8px;
-            background: var(--input-bg-color);
-            outline: none;
-            opacity: 0.9;
-            transition: opacity .15s;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-        }
-        .slider:hover {
-            opacity: 1;
-        }
-        .slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--accent-color);
-            cursor: grab;
-            transition: background-color 0.15s, transform 0.15s;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-        .slider::-webkit-slider-thumb:hover {
-            background: var(--button-bg-color);
-            transform: scale(1.02);
-        }
-        .slider::-webkit-slider-thumb:active {
-            cursor: grabbing;
-            transform: scale(0.98);
-        }
-        .slider::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--accent-color);
-            cursor: grab;
-            transition: background-color 0.15s, transform 0.15s;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-        .slider::-moz-range-thumb:hover {
-            background: var(--button-bg-color);
-            transform: scale(1.02);
-        }
-        .slider::-moz-range-thumb:active {
-            cursor: grabbing;
-            transform: scale(0.98);
-        }
+                <div class="mb-6">
+                    <label for="additional_flags" class="block text-sm font-bold mb-2 text-primary-color">Additional Flags</label>
+                    <input type="text" id="additional_flags" class="input-field w-full p-3 rounded-lg" value="--azureblob-env-auth --crypt-pass-bad-blocks">
+                </div>
 
-        /* Checkbox Styling */
-        .checkbox-container input[type="checkbox"] {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border: 2px solid var(--accent-color);
-            border-radius: 0.375rem;
-            background-color: var(--input-bg-color);
-            cursor: pointer;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.15s ease-in-out;
-        }
+                <!-- Sliders and Dropdowns -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    <div>
+                        <label for="transfers" class="block text-sm font-bold mb-2 text-primary-color">Transfers: <span id="transfers-value">2</span></label>
+                        <input type="range" id="transfers" min="1" max="20" value="2" step="1" class="w-full slider">
+                    </div>
+                    <div>
+                        <label for="checkers" class="block text-sm font-bold mb-2 text-primary-color">Checkers: <span id="checkers-value">3</span></label>
+                        <input type="range" id="checkers" min="1" max="20" value="3" step="1" class="w-full slider">
+                    </div>
+                    <div>
+                        <label for="buffer_size" class="block text-sm font-bold mb-2 text-primary-color">Buffer Size</label>
+                        <select id="buffer_size" class="input-field w-full p-3 rounded-lg custom-select">
+                            <option value="2M">2M</option>
+                            <option value="4M">4M</option>
+                            <option value="8M">8M</option>
+                            <option value="16M" selected>16M</option>
+                            <option value="32M">32M</option>
+                            <option value="64M">64M</option>
+                            <option value="128M">128M</option>
+                            <option value="256M">256M</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="order" class="block text-sm font-bold mb-2 text-primary-color">Order By</label>
+                        <select id="order" class="input-field w-full p-3 rounded-lg custom-select">
+                            <option value="size,ascending">size,ascending</option>
+                            <option value="size,descending">size,descending</option>
+                            <option value="size,mixed,75">size,mixed,75</option>
+                            <option value="size,mixed,50" selected>size,mixed,50</option>
+                            <option value="size,mixed,25">size,mixed,25</option>
+                            <option value="size,mixed,10">size,mixed,10</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="loglevel" class="block text-sm font-bold mb-2 text-primary-color">Log Level</label>
+                        <select id="loglevel" class="input-field w-full p-3 rounded-lg custom-select">
+                            <option value="Info" selected>Info</option>
+                            <option value="ERROR">ERROR</option>
+                            <option value="DEBUG">DEBUG</option>
+                        </select>
+                    </div>
+                </div>
 
-        .checkbox-container input[type="checkbox"]:checked {
-            background-color: var(--accent-color);
-            border-color: var(--accent-color);
-        }
+                <!-- Checkboxes -->
+                <div class="flex flex-wrap gap-4 mb-6">
+                    <label class="flex items-center text-primary-color checkbox-container">
+                        <input type="checkbox" id="use_drive_trash" class="form-checkbox h-5 w-5 text-accent-color rounded focus:ring-accent-color">
+                        <span class="ml-2">Use Drive Trash</span>
+                    </label>
+                    <label class="flex items-center text-primary-color checkbox-container">
+                        <input type="checkbox" id="service_account" class="form-checkbox h-5 w-5 text-accent-color rounded focus:ring-accent-color">
+                        <span class="ml-2">Use Service Account</span>
+                    </label>
+                    <label class="flex items-center text-primary-color checkbox-container">
+                        <input type="checkbox" id="dry_run" class="form-checkbox h-5 w-5 text-accent-color rounded focus:ring-accent-color">
+                        <span class="ml-2">Dry Run</span>
+                    </label>
+                </div>
 
-        .checkbox-container input[type="checkbox"]::after {
-            content: '\2713';
-            color: var(--button-text-color);
-            font-size: 14px;
-            display: none;
-        }
+                <!-- Control Buttons -->
+                <div class="flex flex-wrap gap-4 justify-center mb-6">
+                    <button id="start-rclone-btn" class="btn-primary w-full md:w-auto flex-1"><i class="fas fa-play mr-2"></i> Start Rclone Transfer</button>
+                    <button id="stop-rclone-btn" class="btn-danger w-full md:w-auto flex-1 hidden"><i class="fas fa-stop mr-2"></i> Stop Rclone Transfer</button>
+                    <button onclick="downloadLogs()" class="btn-secondary w-full md:w-auto flex-1"><i class="fas fa-download mr-2"></i> Download Rclone Log</button>
+                </div>
 
-        .checkbox-container input[type="checkbox"]:checked::after {
-            display: block;
-        }
+                <!-- Rclone Live Output -->
+                <div class="relative">
+                    <div id="rclone-spinner" class="spinner-overlay hidden">
+                        <div class="spinner"></div>
+                        <p class="mt-3 text-primary-color text-lg font-medium" id="rclone-spinner-text">Transferring...</p>
+                    </div>
+                    <pre id="rcloneLiveOutput" class="output-area min-h-[200px]"></pre>
+                </div>
+                <p id="rclone-major-steps" class="major-steps-output mt-4"></p>
+            </div>
 
-        .checkbox-container input[type="checkbox"]:focus {
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.4);
-        }
+            <!-- Web Terminal Section -->
+            <div id="web-terminal-section" class="content-section card p-6 rounded-xl shadow-md hidden">
+                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-terminal mr-3"></i> Web Terminal</h2>
 
-        /* Spinner Overlay */
-        .spinner-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(var(--card-bg-color-rgb), 0.95); /* Increased opacity */
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            border-radius: 0.75rem;
-            z-index: 10;
-            backdrop-filter: blur(3px);
-        }
+                <div class="mb-4">
+                    <label for="terminalCommand" class="block text-sm font-bold mb-2 text-primary-color">Enter Command</label>
+                    <input type="text" id="terminalCommand" class="input-field w-full p-3 rounded-lg" placeholder="e.g., ls -la /app">
+                </div>
 
-        .spinner {
-            border: 4px solid var(--border-color);
-            border-top: 4px solid var(--accent-color);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
+                <div class="flex flex-wrap gap-4 justify-center mb-6">
+                    <button id="execute-terminal-btn" class="btn-primary w-full md:w-auto flex-1"><i class="fas fa-play mr-2"></i> Execute Command</button>
+                    <button id="stop-terminal-btn" class="btn-danger w-full md:w-auto flex-1 hidden"><i class="fas fa-stop mr-2"></i> Stop Process</button>
+                    <button onclick="clearTerminalOutput()" class="btn-secondary w-full md:w-auto flex-1"><i class="fas fa-eraser mr-2"></i> Clear Output</button>
+                </div>
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+                <div class="relative">
+                    <div id="terminal-spinner" class="spinner-overlay hidden">
+                        <div class="spinner"></div>
+                        <p class="mt-3 text-primary-color text-lg font-medium" id="terminal-spinner-text">Executing command...</p>
+                    </div>
+                    <pre id="terminalOutput" class="output-area min-h-[300px]"></pre>
+                </div>
+            </div>
 
-        /* Modals */
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.75); /* Increased opacity */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
+            <!-- Recent Commands Section -->
+            <div id="recent-commands-section" class="content-section card p-6 rounded-xl shadow-md hidden">
+                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-history mr-3"></i> Recent Commands</h2>
 
-        .modal-content {
-            background-color: var(--card-bg-color);
-            padding: 2rem;
-            border-radius: 1rem;
-            max-width: 90%;
-            max-height: 90%;
-            overflow-y: auto;
-            position: relative;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-        }
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-accent-color">Rclone Transfers</h3>
+                    <div id="recentRcloneTransfers" class="space-y-3">
+                        <!-- Recent Rclone transfers will be loaded here -->
+                    </div>
+                </div>
 
-        .close-button {
-            position: absolute;
-            top: 1rem;
-            right: 1.5rem;
-            font-size: 2rem;
-            font-weight: bold;
-            cursor: pointer;
-            color: var(--text-color);
-            transition: color 0.2s ease-in-out;
-        }
-        .close-button:hover {
-            color: var(--error-color);
-        }
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 text-accent-color">Web Terminal Commands</h3>
+                    <div id="recentTerminalCommands" class="space-y-3">
+                        <!-- Recent terminal commands will be loaded here -->
+                    </div>
+                </div>
+                <div class="flex justify-end mt-6">
+                    <button onclick="clearAllRecentCommands()" class="btn-danger"><i class="fas fa-trash-alt mr-2"></i> Clear All History</button>
+                </div>
+            </div>
 
-        /* Custom File Upload Styling */
-        .custom-file-upload {
-            display: flex;
-            align-items: center;
-            border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
-            background-color: var(--input-bg-color);
-            color: var(--text-color);
-            padding: 0.5rem;
-            cursor: pointer;
-            overflow: hidden;
-            margin-bottom: 0.5rem;
-        }
+            <!-- Notepad Section -->
+            <div id="notepad-section" class="content-section card p-6 rounded-xl shadow-md hidden">
+                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-clipboard mr-3"></i> Notepad</h2>
+                <textarea id="notepad-content" class="input-field w-full p-4 rounded-lg min-h-[400px]" placeholder="Type or paste your notes here. This content will be saved automatically in your browser."></textarea>
+            </div>
 
-        .file-name-display {
-            flex-grow: 1;
-            padding: 0.5rem 0.75rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            font-size: 0.9rem;
-        }
+        </section>
+    </main>
 
-        .file-button {
-            flex-shrink: 0;
-            padding: 0.5rem 1rem;
-            border-radius: 0.6rem;
-            margin-left: 0.5rem;
-            font-size: 0.9rem;
-            transition: all 0.1s ease-in-out;
-        }
+    <!-- Confirmation Modal for Terminal Process -->
+    <div id="terminalConfirmModal" class="modal hidden">
+        <div class="modal-content card rounded-xl p-8 shadow-2xl">
+            <h2 class="text-2xl font-bold mb-4 text-primary-color">Process Running</h2>
+            <p class="text-text-color mb-6" id="terminalConfirmMessage">A command is currently running: <code class="bg-input-bg-color p-1 rounded"></code>. Do you want to stop it and start a new one?</p>
+            <div class="flex justify-end space-x-4">
+                <button id="confirmStopAndStartBtn" class="btn-danger"><i class="fas fa-stop mr-2"></i> Stop and Start New</button>
+                <button id="cancelStopAndStartBtn" class="btn-secondary"><i class="fas fa-times-circle mr-2"></i> Cancel</button>
+            </div>
+        </div>
+    </div>
 
-        /* Custom Select Styling */
-        select.custom-select {
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='var(--primary-color)'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'%3E%3C/path%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 0.75rem center;
-            background-size: 1.25rem;
-            padding-right: 2.5rem;
-            color: var(--text-color); /* Ensure text color is inherited */
-        }
-
-        /* Styles for options within the custom select dropdown */
-        select.custom-select option {
-            background-color: var(--input-bg-color); /* Background for all options */
-            color: var(--text-color); /* Text color for all options */
-            padding: 0.5rem 1rem; /* Padding for better spacing */
-            transition: background-color 0.15s ease, color 0.15s ease, font-size 0.15s ease;
-        }
-
-        /* Alternating background for dropdown options */
-        select.custom-select option:nth-child(even) {
-            background-color: var(--card-bg-color); /* Slightly different background for even options */
-        }
-
-        /* Hover effect for dropdown options */
-        select.custom-select option:hover,
-        select.custom-select option:checked { /* also apply to selected option for consistency */
-            background-color: var(--accent-color);
-            color: var(--button-text-color);
-            font-size: 1.05em; /* Slightly bigger font on hover/selected */
-        }
-
-        .app-title {
-            font-family: 'Montserrat', sans-serif; /* Semi-formal font */
-            font-weight: 700;
-            background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-size: 2.5rem; /* Slightly bigger */
-        }
-        @media (max-width: 768px) {
-            .app-title {
-                font-size: 2rem; /* Adjust title size for mobile */
-            }
-        }
-
-        /* Header behavior */
-        .header-visible {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        .header-hidden {
-            transform: translateY(-100%);
-            opacity: 0;
-        }
-        header {
-            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-            background-color: rgba(var(--card-bg-color-rgb), 0.95); /* Increased opacity */
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        /* For better mobile experience */
-        @media (max-width: 768px) {
-            main {
-                flex-direction: column;
-            }
-            aside {
-                width: 100%;
-            }
-            .btn-primary, .btn-danger, .btn-secondary {
-                width: 100%;
-            }
-            .modal-content {
-                padding: 1.5rem;
-            }
-            .custom-file-upload {
-                flex-direction: column;
-                align-items: stretch;
-                padding: 0.75rem;
-            }
-            .file-name-display {
-                text-align: center;
-                margin-bottom: 0.5rem;
-            }
-            .file-button {
-                width: 100%;
-                margin-left: 0;
-                margin-top: 0.5rem;
-            }
-            header .flex-wrap {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            header .space-x-4 {
-                margin-top: 1rem;
-                width: 100%;
-                justify-content: space-between;
-            }
-        }
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
