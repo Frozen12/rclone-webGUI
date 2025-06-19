@@ -222,7 +222,7 @@ def execute_rclone():
             for line in iter(process.stdout.readline, ''):
                 clean_line = line.strip()
                 write_to_log(LOG_FILE, clean_line)
-                yield f"data: {json.dumps({'status': 'progress', 'output': clean_line})}\\n\\n"
+                yield f"data: {json.dumps({'status': 'progress', 'output': clean_line})}\n\n"
             
             process.wait() # Wait for the process to finish
             return_code = process.returncode
@@ -230,16 +230,20 @@ def execute_rclone():
             final_message = "Rclone process completed successfully." if final_status == "complete" else f"Rclone process finished with errors (code: {return_code})."
             
             last_lines = read_last_n_lines(LOG_FILE, 50)
-            yield f"data: {json.dumps({'status': final_status, 'message': final_message, 'output': '\\n'.join(last_lines)})}\\n\\n"
+            
+            # *** FIX: Pre-format the string with newlines to avoid backslash in f-string expression ***
+            output_str = "\n".join(last_lines)
+            payload = {'status': final_status, 'message': final_message, 'output': output_str}
+            yield f"data: {json.dumps(payload)}\n\n"
 
         except FileNotFoundError:
             error_msg = "Error: 'rclone' command not found. Ensure Rclone is installed and in your system's PATH."
             write_to_log(LOG_FILE, error_msg)
-            yield f"data: {json.dumps({'status': 'error', 'message': error_msg, 'output': error_msg})}\\n\\n"
+            yield f"data: {json.dumps({'status': 'error', 'message': error_msg, 'output': error_msg})}\n\n"
         except Exception as e:
             error_msg = f"An unexpected error occurred: {e}"
             write_to_log(LOG_FILE, error_msg)
-            yield f"data: {json.dumps({'status': 'error', 'message': error_msg, 'output': error_msg})}\\n\\n"
+            yield f"data: {json.dumps({'status': 'error', 'message': error_msg, 'output': error_msg})}\n\n"
         finally:
             with process_lock:
                 rclone_process_holder['process'] = None # Clear process holder
