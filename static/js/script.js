@@ -1,5 +1,6 @@
 // Vue.js Application
 const app = Vue.createApp({
+    delimiters: ['[[', ']]'], // IMPORTANT: Change Vue delimiters to avoid Jinja2 conflict
     data() {
         return {
             // UI State
