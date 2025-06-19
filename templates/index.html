@@ -4,185 +4,328 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rclone WebGUI</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Base styles for Inter font, applied by Vue app */
+        body { font-family: 'Inter', sans-serif; }
+    </style>
 </head>
-<body class="bg-gray-900 text-gray-200 font-sans leading-normal antialiased">
-    <div class="max-w-6xl mx-auto px-4 py-8">
-        <header class="flex justify-between items-center mb-10 pb-4 border-b border-gray-700">
-            <h1 class="text-5xl font-extrabold text-blue-400 tracking-tight">Rclone WebGUI</h1>
-            <button onclick="logout()" class="px-5 py-2 rounded-lg bg-gray-700 text-gray-200 font-semibold hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-200 ease-in-out">Logout</button>
+<body class="bg-gray-50 text-gray-800 antialiased min-h-screen flex flex-col transition-colors duration-300">
+    <div id="app" class="flex flex-col flex-grow">
+        <!-- Header -->
+        <header class="bg-gradient-to-r from-emerald-500 to-green-600 shadow-lg py-4 px-6 flex justify-between items-center text-white">
+            <h1 class="text-3xl font-bold tracking-tight">Rclone WebGUI</h1>
+            <div class="flex items-center space-x-4">
+                <!-- Color Theme Selector -->
+                <div class="relative group">
+                    <button class="flex items-center space-x-2 p-2 rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50">
+                        <i class="fas fa-palette text-xl"></i>
+                        <span class="font-semibold text-sm">Themes</span>
+                    </button>
+                    <div class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-2 z-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform scale-95 group-hover:scale-100 origin-top-right">
+                        <button @click="changeTheme('emerald')" class="flex items-center w-full px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-emerald-100 dark:hover:bg-gray-700">
+                            <span class="w-4 h-4 bg-emerald-500 rounded-full mr-2"></span> Emerald
+                        </button>
+                        <button @click="changeTheme('blue')" class="flex items-center w-full px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-blue-100 dark:hover:bg-gray-700">
+                            <span class="w-4 h-4 bg-blue-500 rounded-full mr-2"></span> Blue
+                        </button>
+                        <button @click="changeTheme('purple')" class="flex items-center w-full px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-purple-100 dark:hover:bg-gray-700">
+                            <span class="w-4 h-4 bg-purple-500 rounded-full mr-2"></span> Purple
+                        </button>
+                        <button @click="changeTheme('red')" class="flex items-center w-full px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-red-100 dark:hover:bg-gray-700">
+                            <span class="w-4 h-4 bg-red-500 rounded-full mr-2"></span> Red
+                        </button>
+                        <button @click="changeTheme('orange')" class="flex items-center w-full px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-orange-100 dark:hover:bg-gray-700">
+                            <span class="w-4 h-4 bg-orange-500 rounded-full mr-2"></span> Orange
+                        </button>
+                        <button @click="changeTheme('indigo')" class="flex items-center w-full px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-indigo-100 dark:hover:bg-gray-700">
+                            <span class="w-4 h-4 bg-indigo-500 rounded-full mr-2"></span> Indigo
+                        </button>
+                        <hr class="border-gray-200 dark:border-gray-700 my-1">
+                        <button @click="toggleDarkMode" class="flex items-center w-full px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
+                            <i :class="[darkMode ? 'fas fa-sun' : 'fas fa-moon']" class="mr-2"></i> {{ darkMode ? 'Light Mode' : 'Dark Mode' }}
+                        </button>
+                    </div>
+                </div>
+
+                <button @click="logout" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-semibold py-2 px-4 rounded-full shadow-md transition-all duration-200">
+                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                </button>
+            </div>
         </header>
 
-        <nav class="flex justify-center space-x-4 mb-10">
-            <button id="setupBtn" class="px-6 py-3 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out">Setup</button>
-            <button id="terminalBtn" class="px-6 py-3 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out">Web Terminal</button>
-            <button id="recentCommandsBtn" class="px-6 py-3 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out">Recent Commands</button>
-        </nav>
+        <!-- Main Content Area -->
+        <main class="flex flex-grow p-6">
+            <!-- Left Navigation (Tabs) -->
+            <nav class="flex flex-col space-y-4 pr-6 border-r border-gray-200 dark:border-gray-700">
+                <button @click="activeSection = 'rclone'" :class="{'nav-active': activeSection === 'rclone'}" class="nav-button">
+                    <i class="fas fa-cloud-upload-alt mr-2"></i> Rclone Transfer
+                </button>
+                <button @click="activeSection = 'setup'" :class="{'nav-active': activeSection === 'setup'}" class="nav-button">
+                    <i class="fas fa-cog mr-2"></i> Setup
+                </button>
+                <button @click="activeSection = 'terminal'" :class="{'nav-active': activeSection === 'terminal'}" class="nav-button">
+                    <i class="fas fa-terminal mr-2"></i> Web Terminal
+                </button>
+                <button @click="showRecentCommandsModal = true" class="nav-button">
+                    <i class="fas fa-history mr-2"></i> Recent Commands
+                </button>
+            </nav>
 
-        <section id="setupSection" class="hidden bg-gray-800 p-8 rounded-xl shadow-xl border border-gray-700 mb-10">
-            <h2 class="text-3xl font-bold mb-6 text-blue-300 border-b border-gray-700 pb-4">Rclone Setup</h2>
+            <!-- Right Content Area (Sections) -->
+            <div class="flex-grow pl-6 max-w-full">
 
-            <div class="mb-8 pb-8 border-b border-gray-700">
-                <h3 class="text-2xl font-semibold mb-4 text-white">Upload `rclone.conf`</h3>
-                <input type="file" id="rcloneConfFile" class="block w-full text-sm text-gray-300
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-full file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-blue-500 file:text-white
-                    hover:file:bg-blue-600 cursor-pointer mb-4">
-                <button onclick="uploadRcloneConf()" class="w-full px-5 py-2 rounded-lg bg-gray-700 text-gray-200 font-semibold hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-200 ease-in-out">Upload `rclone.conf`</button>
-            </div>
+                <!-- Rclone Transfer Section -->
+                <section v-show="activeSection === 'rclone'" class="section-card">
+                    <h2 class="section-title">Rclone Transfer Operations</h2>
 
-            <div>
-                <h3 class="text-2xl font-semibold mb-4 text-white">Upload Service Account ZIP</h3>
-                <input type="file" id="saZipFile" class="block w-full text-sm text-gray-300
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-full file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-blue-500 file:text-white
-                    hover:file:bg-blue-600 cursor-pointer mb-4">
-                <button onclick="uploadSaZip()" class="w-full px-5 py-2 rounded-lg bg-gray-700 text-gray-200 font-semibold hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-200 ease-in-out">Upload SA ZIP</button>
-            </div>
-        </section>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label for="mode" class="input-label">Rclone Mode:</label>
+                            <select id="mode" v-model="rcloneForm.mode" @change="updateModeDescription; toggleDestinationField" class="input-field">
+                                <optgroup label="Two Remote Commands">
+                                    <option value="sync" selected>sync: Make source and destination identical.</option>
+                                    <option value="copy">copy: Copy files from source to destination.</option>
+                                    <option value="move">move: Move files from source to destination.</option>
+                                    <option value="copyurl">copyurl: Copy a URL content to destination.</option>
+                                    <option value="check">check: Check files in the source match the files in the destination.</option>
+                                    <option value="cryptcheck">cryptcheck: Cryptcheck the vault.</option>
+                                </optgroup>
+                                <optgroup label="One Remote Commands">
+                                    <option value="lsd">lsd: List directories/containers in the path.</option>
+                                    <option value="ls">ls: List all files in the path.</option>
+                                    <option value="tree">tree: List contents of remote in a tree-like fashion.</option>
+                                    <option value="listremotes">listremotes: List all remotes in the config file.</option>
+                                    <option value="mkdir">mkdir: Create new directory.</option>
+                                    <option value="size">size: Counts objects and their sizes in a remote.</option>
+                                    <option value="serve">serve: Serve a remote over HTTP/WebDAV/FTP/etc.</option>
+                                    <option value="dedupe">dedupe: Remove duplicate files.</option>
+                                    <option value="cleanup">cleanup: Clean up the remote.</option>
+                                    <option value="checksum">checksum: Check files checksums.</option>
+                                    <option value="delete">delete: Remove files in the path.</option>
+                                    <option value="deletefile">deletefile: Remove a single file from remote.</option>
+                                    <option value="purge">purge: Remove all content in the path.</option>
+                                    <option value="version">version: Show version and exit.</option>
+                                </optgroup>
+                            </select>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ modeDescription }}</p>
+                            <p v-if="['delete', 'purge'].includes(rcloneForm.mode)" class="text-sm text-red-500 font-semibold mt-2">
+                                <i class="fas fa-exclamation-triangle mr-1"></i> Warning: {{ rcloneForm.mode }} mode will permanently delete data! Use with caution.
+                            </p>
+                        </div>
 
-        <section id="terminalSection" class="hidden bg-gray-800 p-8 rounded-xl shadow-xl border border-gray-700 mb-10">
-            <h2 class="text-3xl font-bold mb-6 text-blue-300 border-b border-gray-700 pb-4">Web Terminal</h2>
-            <div class="mb-6">
-                <label for="terminalCommandInput" class="block text-gray-300 text-sm font-semibold mb-2">Command:</label>
-                <input type="text" id="terminalCommandInput" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400 mb-4" placeholder="e.g., ls -la /app">
-                <div class="flex space-x-4">
-                    <button onclick="executeTerminalCommand()" class="flex-grow px-5 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-200 ease-in-out">Execute Command</button>
-                    <button onclick="clearTerminalOutput()" class="px-5 py-2 rounded-lg bg-gray-600 text-white font-semibold hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-200 ease-in-out">Clear Output</button>
-                    <button onclick="stopTerminalProcess()" class="px-5 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 transition duration-200 ease-in-out">Stop Process</button>
-                </div>
-            </div>
-            <div id="terminalSpinner" class="hidden flex items-center justify-center text-lime-400 mb-4">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-400"></div>
-                <span class="ml-3 text-lg">Executing command...</span>
-            </div>
-            <div>
-                <label for="terminalOutput" class="block text-gray-300 text-sm font-semibold mb-2">Interactive Web Terminal Output:</label>
-                <pre id="terminalOutput" class="bg-gray-900 text-lime-400 p-4 rounded-lg overflow-auto font-mono text-sm border border-gray-700 h-96"></pre>
-            </div>
-        </section>
+                        <div>
+                            <label for="source" class="input-label">Source Path:</label>
+                            <input type="text" id="source" v-model="rcloneForm.source" class="input-field" placeholder="e.g., remote:path/to/source">
+                        </div>
 
-        <div id="recentCommandsModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden">
-            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 w-full max-w-md">
-                <div class="flex justify-between items-center pb-4 mb-4 border-b border-gray-700">
-                    <h3 class="text-2xl font-bold text-blue-300">Recent Activity</h3>
-                    <button onclick="closeRecentCommandsModal()" class="text-gray-400 hover:text-white text-3xl font-bold leading-none">&times;</button>
-                </div>
-                <div class="max-h-96 overflow-y-auto">
-                    <h4 class="text-lg font-semibold text-gray-200 mb-2">Last Rclone Locations:</h4>
-                    <div id="lastRcloneLocations" class="bg-gray-700 p-3 rounded-lg mb-4 text-sm font-mono break-all text-gray-300">
-                        <p><span class="font-bold text-blue-300">Source:</span> <span id="lastSource">N/A</span></p>
-                        <p><span class="font-bold text-blue-300">Destination:</span> <span id="lastDestination">N/A</span></p>
+                        <div v-show="showDestinationField">
+                            <label for="destination" class="input-label">Destination Path:</label>
+                            <input type="text" id="destination" v-model="rcloneForm.destination" class="input-field" placeholder="e.g., remote:path/to/destination">
+                        </div>
                     </div>
 
-                    <h4 class="text-lg font-semibold text-gray-200 mb-2">Terminal Command History:</h4>
-                    <div id="terminalCommandHistory">
-                        <p class="text-gray-400">No commands yet.</p>
+                    <h3 class="font-semibold text-lg mb-4 text-gray-700 dark:text-gray-300">Advanced Rclone Flags</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                        <div>
+                            <label for="transfers" class="input-label flex justify-between items-center">
+                                Transfers: <span class="text-sm text-gray-500 dark:text-gray-400">{{ rcloneForm.transfers }}</span>
+                            </label>
+                            <input type="range" id="transfers" v-model="rcloneForm.transfers" min="1" max="20" step="1" class="slider-field">
+                        </div>
+                        <div>
+                            <label for="checkers" class="input-label flex justify-between items-center">
+                                Checkers: <span class="text-sm text-gray-500 dark:text-gray-400">{{ rcloneForm.checkers }}</span>
+                            </label>
+                            <input type="range" id="checkers" v-model="rcloneForm.checkers" min="1" max="20" step="1" class="slider-field">
+                        </div>
+                        <div>
+                            <label for="buffer_size" class="input-label">Buffer Size:</label>
+                            <select id="buffer_size" v-model="rcloneForm.buffer_size" class="input-field">
+                                <option value="2M">2M</option>
+                                <option value="4M">4M</option>
+                                <option value="8M">8M</option>
+                                <option value="16M">16M</option>
+                                <option value="32M">32M</option>
+                                <option value="64M">64M</option>
+                                <option value="128M">128M</option>
+                                <option value="256M">256M</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="order" class="input-label">Order By:</label>
+                            <select id="order" v-model="rcloneForm.order" class="input-field">
+                                <option value="size,ascending">size,ascending</option>
+                                <option value="size,descending">size,descending</option>
+                                <option value="size,mixed,75">size,mixed,75</option>
+                                <option value="size,mixed,50">size,mixed,50</option>
+                                <option value="size,mixed,25">size,mixed,25</option>
+                                <option value="size,mixed,10">size,mixed,10</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="log_level" class="input-label">Log Level:</label>
+                            <select id="log_level" v-model="rcloneForm.log_level" class="input-field">
+                                <option value="ERROR">ERROR</option>
+                                <option value="INFO">INFO</option>
+                                <option value="DEBUG">DEBUG</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2 lg:col-span-1">
+                            <label for="additional_flags" class="input-label">Additional Flags:</label>
+                            <input type="text" id="additional_flags" v-model="rcloneForm.additional_flags" class="input-field" placeholder="e.g., --fast-list --checksum">
+                        </div>
                     </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="use_drive_trash" v-model="rcloneForm.use_drive_trash" class="checkbox-field">
+                            <label for="use_drive_trash" class="ml-2 text-gray-700 dark:text-gray-300">Use Drive Trash</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="service_account" v-model="rcloneForm.service_account" class="checkbox-field">
+                            <label for="service_account" class="ml-2 text-gray-700 dark:text-gray-300">Use Service Account</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="dry_run" v-model="rcloneForm.dry_run" class="checkbox-field">
+                            <label for="dry_run" class="ml-2 text-gray-700 dark:text-gray-300">Dry Run</label>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                        <button @click="startRcloneTransfer" :disabled="rcloneTransferRunning" :class="{'button-primary': !rcloneTransferRunning, 'button-disabled': rcloneTransferRunning}" class="flex-1">
+                            <i class="fas fa-play mr-2"></i> Start Rclone Transfer
+                        </button>
+                        <button @click="stopRcloneTransfer" :disabled="!rcloneTransferRunning" :class="{'button-danger': rcloneTransferRunning, 'button-disabled': !rcloneTransferRunning}" class="flex-1">
+                            <i class="fas fa-stop mr-2"></i> Stop Rclone Transfer
+                        </button>
+                        <button @click="downloadLogs" class="button-secondary flex-1">
+                            <i class="fas fa-download mr-2"></i> Download Rclone Log
+                        </button>
+                    </div>
+
+                    <!-- Rclone Loading Spinner -->
+                    <div v-show="rcloneSpinnerVisible" class="loading-spinner">
+                        <div class="spinner border-t-2 border-r-2 border-b-2"></div>
+                        <p class="text-sm mt-2 text-gray-600 dark:text-gray-400">Transferring...</p>
+                    </div>
+
+                    <h3 class="font-semibold text-lg mb-2 text-gray-700 dark:text-gray-300">Live Rclone Output</h3>
+                    <pre id="rcloneLiveOutput" class="output-area text-sm overflow-auto max-h-64"></pre>
+                </section>
+
+                <!-- Setup Section -->
+                <section v-show="activeSection === 'setup'" class="section-card">
+                    <h2 class="section-title">Setup Configuration</h2>
+
+                    <div class="mb-6">
+                        <label for="rcloneConfFile" class="input-label">Upload rclone.conf:</label>
+                        <div class="flex flex-col sm:flex-row gap-4 mt-2">
+                            <input type="file" id="rcloneConfFile" ref="rcloneConfFile" accept=".conf" class="file-input flex-grow">
+                            <button @click="uploadRcloneConf" class="button-primary-outline min-w-[120px]">
+                                <i class="fas fa-upload mr-2"></i> Upload
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label for="saZipFile" class="input-label">Upload Service Account ZIP:</label>
+                        <div class="flex flex-col sm:flex-row gap-4 mt-2">
+                            <input type="file" id="saZipFile" ref="saZipFile" accept=".zip" class="file-input flex-grow">
+                            <button @click="uploadSaZip" class="button-primary-outline min-w-[120px]">
+                                <i class="fas fa-upload mr-2"></i> Upload
+                            </button>
+                        </div>
+                    </div>
+
+                    <h3 class="font-semibold text-lg mb-2 text-gray-700 dark:text-gray-300">Setup Output</h3>
+                    <pre id="majorStepsOutput" class="output-area text-sm"></pre>
+                </section>
+
+                <!-- Web Terminal Section -->
+                <section v-show="activeSection === 'terminal'" class="section-card">
+                    <h2 class="section-title">Web Terminal</h2>
+
+                    <div class="mb-4">
+                        <label for="terminalCommandInput" class="input-label">Enter Command:</label>
+                        <input type="text" id="terminalCommandInput" v-model="terminalCommand" @keyup.enter="executeTerminalCommand" class="input-field" placeholder="e.g., ls -la">
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                        <button @click="executeTerminalCommand" :disabled="terminalSpinnerVisible" :class="{'button-primary': !terminalSpinnerVisible, 'button-disabled': terminalSpinnerVisible}" class="flex-1">
+                            <i class="fas fa-play mr-2"></i> Execute Command
+                        </button>
+                        <button @click="stopTerminalProcess" :disabled="!terminalSpinnerVisible" :class="{'button-danger': terminalSpinnerVisible, 'button-disabled': !terminalSpinnerVisible}" class="flex-1">
+                            <i class="fas fa-stop mr-2"></i> Stop Process
+                        </button>
+                        <button @click="clearTerminalOutput" class="button-secondary flex-1">
+                            <i class="fas fa-eraser mr-2"></i> Clear Output
+                        </button>
+                    </div>
+
+                    <!-- Terminal Loading Spinner -->
+                    <div v-show="terminalSpinnerVisible" class="loading-spinner">
+                        <div class="spinner border-t-2 border-r-2 border-b-2"></div>
+                        <p class="text-sm mt-2 text-gray-600 dark:text-gray-400">Executing command...</p>
+                    </div>
+
+                    <h3 class="font-semibold text-lg mb-2 text-gray-700 dark:text-gray-300">Live Terminal Output</h3>
+                    <pre id="terminalOutput" class="output-area text-sm overflow-auto max-h-64"></pre>
+                </section>
+            </div>
+        </main>
+
+        <!-- Recent Commands Modal -->
+        <div v-show="showRecentCommandsModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200">Recent Commands History</h2>
+                    <button @click="showRecentCommandsModal = false" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="font-semibold text-lg mb-2 text-gray-700 dark:text-gray-300">Rclone Transfers</h3>
+                    <div v-if="recentRcloneTransfers.length === 0" class="text-gray-500 dark:text-gray-400">No recent Rclone transfers.</div>
+                    <ul class="space-y-2 max-h-48 overflow-y-auto">
+                        <li v-for="(transfer, index) in recentRcloneTransfers" :key="index" class="p-3 bg-gray-100 dark:bg-gray-700 rounded-md shadow-sm flex justify-between items-center">
+                            <span class="text-sm break-all mr-4">
+                                <strong>Mode:</strong> {{ transfer.mode }}<br>
+                                <strong>Source:</strong> {{ transfer.source }}<br>
+                                <span v-if="transfer.destination"><strong>Destination:</strong> {{ transfer.destination }}</span>
+                            </span>
+                            <button @click="copyRcloneTransfer(transfer)" class="button-icon">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold text-lg mb-2 text-gray-700 dark:text-gray-300">Terminal Commands</h3>
+                    <div v-if="recentTerminalCommands.length === 0" class="text-gray-500 dark:text-gray-400">No recent terminal commands.</div>
+                    <ul class="space-y-2 max-h-48 overflow-y-auto">
+                        <li v-for="(command, index) in recentTerminalCommands" :key="index" class="p-3 bg-gray-100 dark:bg-gray-700 rounded-md shadow-sm flex justify-between items-center">
+                            <span class="font-mono text-sm break-all mr-4">{{ command }}</span>
+                            <button @click="copyToClipboard(command)" class="button-icon">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
+    </div>
 
-
-        <section class="bg-gray-800 p-8 rounded-xl shadow-xl border border-gray-700">
-            <h2 class="text-3xl font-bold mb-6 text-blue-300 border-b border-gray-700 pb-4">Rclone Transfer Operations</h2>
-
-            <div class="mb-6">
-                <label for="majorStepsOutput" class="block text-gray-300 text-sm font-semibold mb-2">🚀 Major Steps / Errors:</label>
-                <pre id="majorStepsOutput" class="bg-gray-900 text-red-400 p-4 rounded-lg overflow-auto font-mono text-sm border border-gray-700 h-24"></pre>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                    <label for="mode" class="block text-gray-300 text-sm font-semibold mb-2">Mode:</label>
-                    <select id="mode" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400" onchange="updateModeDescription(); toggleRemoteField();">
-                        <optgroup label="Two Remote Commands (Source & Destination)" class="text-blue-300 font-semibold">
-                            <option value="sync" selected class="text-gray-100">sync - Make source and destination identical</option>
-                            <option value="copy" class="text-gray-100">copy - Copy files from source to destination</option>
-                            <option value="move" class="text-gray-100">move - Move files from source to destination</option>
-                            <option value="purge" class="text-gray-100">purge - Remove all content in the path</option>
-                            <option value="delete" class="text-gray-100">delete - Remove files in the path</option>
-                            <option value="dedupe" class="text-gray-100">dedupe - Remove duplicate files</option>
-                            <option value="cleanup" class="text-gray-100">cleanup - Clean up the remote</option>
-                            <option value="checksum" class="text-gray-100">checksum - Check files checksums</option>
-                        </optgroup>
-                        <optgroup label="One Remote Commands (Remote Only)" class="text-blue-300 font-semibold">
-                            <option value="lsd" class="text-gray-100">lsd - List directories/containers in the path</option>
-                            <option value="ls" class="text-gray-100">ls - List all files in the path</option>
-                            <option value="tree" class="text-gray-100">tree - List contents of the remote in a tree-like fashion</option>
-                            <option value="serve" class="text-gray-100">serve - Serve a remote over HTTP/WebDAV/FTP/etc.</option>
-                            <option value="mkdir" class="text-gray-100">mkdir - Create new directory</option>
-                            <option value="listremotes" class="text-gray-100">listremotes - List all the remotes in the config file</option>
-                        </optgroup>
-                    </select>
-                    <p id="modeDescription" class="text-gray-400 text-sm mt-2 italic"></p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                    <label for="source" id="sourceLabel" class="block text-gray-300 text-sm font-semibold mb-2">Source:</label>
-                    <input type="text" id="source" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400" placeholder="remote:path/to/source">
-                </div>
-                <div id="destinationField">
-                    <label for="destination" class="block text-gray-300 text-sm font-semibold mb-2">Destination:</label>
-                    <input type="text" id="destination" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400" placeholder="remote:path/to/destination">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                    <label for="transfers" class="block text-gray-300 text-sm font-semibold mb-2">Transfers:</label>
-                    <input type="number" id="transfers" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400" value="4" min="1" max="128">
-                </div>
-                <div>
-                    <label for="checkers" class="block text-gray-300 text-sm font-semibold mb-2">Checkers:</label>
-                    <input type="number" id="checkers" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400" value="8" min="1" max="128">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                    <label for="buffer_size" class="block text-gray-300 text-sm font-semibold mb-2">Buffer Size (MB):</label>
-                    <input type="number" id="buffer_size" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400" value="128" min="1" max="1024">
-                </div>
-                <div>
-                    <label for="order" class="block text-gray-300 text-sm font-semibold mb-2">Order By:</label>
-                    <select id="order" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400">
-                        <option value="name">Name</option>
-                        <option value="size">Size</option>
-                        <option value="modtime">Modification Time</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div>
-                    <label for="loglevel" class="block text-gray-300 text-sm font-semibold mb-2">Log Level:</label>
-                    <select id="loglevel" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400">
-                        <option value="Info">Info</option>
-                        <option value="ERROR">Error</option>
-                        <option value="DEBUG">Debug</option>
-                    </select>
-                </div>
-                 <div>
-                    <label for="additional_flags" class="block text-gray-300 text-sm font-semibold mb-2">Additional Flags:</label>
-                    <input type="text" id="additional_flags" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400" placeholder="e.g., --drive-server-side-across-configs">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div class="flex items-center">
-                    <input type="checkbox" id="use_drive_trash" class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 bg-gray-700 border-gray-600">
-                    <label for="use_drive_trash" class="ml-2 text-gray-300 select-none cursor-pointer">Use Drive Trash</label>
-                </div>
-                <div class="flex items-center">
-                    <input type="checkbox" id="service_account" class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 bg-gray-700 border-gray-600">
-                    <label for="service_account" class="ml-2 text-gray-300 select-none cursor-pointer">Use Service Account</label>
-                </div>
-                <div class="flex items-center">
-                    <input type="checkbox" id="dry_run" class="h-5 w-5 text-
+    <!-- Vue.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.2.31/dist/vue.global.prod.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
