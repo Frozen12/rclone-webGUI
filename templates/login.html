@@ -7,31 +7,32 @@
     <link href="https://cdn.tailwindcss.com" rel="stylesheet">
     <style>
         body {
-            background-color: #1a202c; /* Dark background */
-            color: #e2e8f0; /* Light text */
-            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            background-color: #0d1117; /* Dark background similar to GitHub dark theme */
+            color: #c9d1d9; /* Light text color */
+            font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
         }
         .container {
             max-width: 400px;
         }
         .input-field {
-            @apply shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-200;
+            @apply shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400;
         }
         .btn-primary {
-            @apply bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150 ease-in-out;
+            @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-200 ease-in-out;
         }
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="flex items-center justify-center min-h-screen p-6">
-    <div class="container mx-auto bg-gray-800 p-8 rounded-lg shadow-xl">
+    <div class="container mx-auto bg-gray-800 p-8 rounded-xl shadow-xl border border-gray-700">
         <h2 class="text-3xl font-bold text-center mb-6 text-blue-400">Login</h2>
         <form action="/login" method="POST">
             <div class="mb-4">
-                <label for="username" class="block text-white text-sm font-bold mb-2">Username:</label>
+                <label for="username" class="block text-gray-300 text-sm font-semibold mb-2">Username:</label>
                 <input type="text" id="username" name="username" class="input-field" required>
             </div>
             <div class="mb-6">
-                <label for="password" class="block text-white text-sm font-bold mb-2">Password:</label>
+                <label for="password" class="block text-gray-300 text-sm font-semibold mb-2">Password:</label>
                 <input type="password" id="password" name="password" class="input-field" required>
             </div>
             <div class="flex items-center justify-between">
