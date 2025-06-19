@@ -18,9 +18,11 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=360) # Remember use
 
 # Directories and Files
 BASE_CONFIG_DIR = '/app/.config/rclone'
-UPLOAD_FOLDER = os.path.join(BASE_CONFIG_DIR, 'uploads') # Not explicitly used for conf/sa, but good to have
+# UPLOAD_FOLDER is not explicitly used for conf/sa, but could be for other general uploads if needed
+UPLOAD_FOLDER = os.path.join(BASE_CONFIG_DIR, 'uploads')
 RCLONE_CONFIG_PATH = os.path.join(BASE_CONFIG_DIR, 'rclone.conf')
-SERVICE_ACCOUNT_DIR = os.path.join(BASE_CONFIG_DIR, 'accounts') # Changed to 'accounts' for clarity
+# SERVICE_ACCOUNT_DIR now points to the same location as BASE_CONFIG_DIR for SA JSONs
+SERVICE_ACCOUNT_DIR = BASE_CONFIG_DIR 
 LOG_FILE = os.path.join('/tmp', 'rcloneLog.txt') # Use /tmp for ephemeral logs on Render
 TERMINAL_LOG_FILE = os.path.join('/tmp', 'terminalLog.txt') # Use /tmp for ephemeral logs on Render
 
@@ -32,11 +34,13 @@ LOGIN_PASSWORD = os.environ.get('LOGIN_PASSWORD', 'password') # IMPORTANT: Chang
 def create_initial_dirs():
     """Creates necessary directories for the application."""
     os.makedirs(BASE_CONFIG_DIR, exist_ok=True)
-    os.makedirs(SERVICE_ACCOUNT_DIR, exist_ok=True)
+    # SERVICE_ACCOUNT_DIR is now the same as BASE_CONFIG_DIR, so no separate creation needed
+    # os.makedirs(SERVICE_ACCOUNT_DIR, exist_ok=True) # This line is no longer needed
+
     # Ensure logs are cleared on startup for a fresh start each deployment/restart
     clear_log(LOG_FILE)
     clear_log(TERMINAL_LOG_FILE)
-    print(f"Directories created: {BASE_CONFIG_DIR}, {SERVICE_ACCOUNT_DIR}")
+    print(f"Directories created: {BASE_CONFIG_DIR}")
     print(f"Logs cleared: {LOG_FILE}, {TERMINAL_LOG_FILE}")
 
 # Call directory creation on app startup
@@ -156,18 +160,19 @@ def upload_sa_zip():
     if file.filename == '':
         return jsonify({"status": "error", "message": "No selected file"}), 400
     if file and file.filename.endswith('.zip'):
-        zip_path = os.path.join('/tmp', 'sa-accounts.zip') # Use /tmp for temporary zip
+        # Save the zip file directly in BASE_CONFIG_DIR as per request
+        zip_path = os.path.join(BASE_CONFIG_DIR, 'sa-accounts.zip')
         try:
             file.save(zip_path)
 
-            # Clear existing JSON files in SERVICE_ACCOUNT_DIR
+            # Clear existing JSON files directly in BASE_CONFIG_DIR (now SERVICE_ACCOUNT_DIR)
             for filename in os.listdir(SERVICE_ACCOUNT_DIR):
                 if filename.endswith('.json'):
                     os.remove(os.path.join(SERVICE_ACCOUNT_DIR, filename))
 
-            # Extract new ZIP contents
+            # Extract new ZIP contents directly into BASE_CONFIG_DIR (now SERVICE_ACCOUNT_DIR)
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(SERVICE_ACCOUNT_DIR)
+                zip_ref.extractall(SERVICE_ACCOUNT_DIR) # This extracts into /app/.config/rclone/
 
             os.remove(zip_path) # Clean up the temporary zip file
             return jsonify({"status": "success", "message": f"Service account ZIP extracted to {SERVICE_ACCOUNT_DIR}. Existing JSONs cleared."})
@@ -242,6 +247,7 @@ def execute_rclone():
     cmd.append(f"--config={RCLONE_CONFIG_PATH}")
 
     # Service Account
+    # Check for service accounts directly in BASE_CONFIG_DIR (now SERVICE_ACCOUNT_DIR)
     if use_service_account and os.path.exists(SERVICE_ACCOUNT_DIR) and any(f.endswith('.json') for f in os.listdir(SERVICE_ACCOUNT_DIR)):
         cmd.append(f"--drive-service-account-directory={SERVICE_ACCOUNT_DIR}")
     elif use_service_account and not os.path.exists(SERVICE_ACCOUNT_DIR):
@@ -285,8 +291,8 @@ def execute_rclone():
 
     # Generator function to stream output
     def generate_rclone_output():
-        nonlocal rclone_process
-        nonlocal rclone_output_buffer
+        global rclone_process # Corrected: use global for module-level variables
+        global rclone_output_buffer # Corrected: use global for module-level variables
         full_output = []
         stop_rclone_flag.clear() # Clear the stop flag for a new run
 
