@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Rclone WebGUI</title>
+    <script>
+        // Apply saved theme immediately to prevent flash
+        const savedTheme = localStorage.getItem('theme') || 'dark-mode';
+        document.documentElement.className = savedTheme; // Apply to html tag for full page theme
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
@@ -22,197 +27,252 @@
         }
         :root {
             /* Default Greenish White Monochromatic */
-            --primary-color: #E0EAE0; /* Soft greenish-white */
-            --accent-color: #6A9A6A; /* Muted deep green */
-            --bg-color: #0F1A0F; /* Dark background */
-            --card-bg-color: #1C2B1C; /* Slightly lighter dark for cards */
-            --text-color: #E0EAE0; /* Light text */
-            --border-color: #384A38; /* Darker green border */
-            --input-bg-color: #2A3B2A;
-            --button-bg-color: #558A55;
-            --button-text-color: #F0F5F0; /* Slightly off-white for button text */
+            --primary-color: #DCE7DC; /* Lighter greenish-white for text */
+            --accent-color: #558B55; /* Muted vibrant green */
+            --bg-color: #1A2A1A; /* Dark background */
+            --card-bg-color: #2D402D; /* Darker card background for contrast */
+            --text-color: #DCE7DC; /* General text color */
+            --border-color: #4A6B4A; /* Darker green border for definition */
+            --input-bg-color: #3C503C; /* Slightly lighter input background */
+            --button-bg-color: #6AA66A; /* Brighter button green */
+            --button-text-color: #1A2A1A; /* Dark text for light buttons */
             --success-color: #4CAF50;
-            --error-color: #F44336;
-            --warning-color: #FFC107;
-            --bg-gradient-start: #1A2A1A;
-            --bg-gradient-end: #0B140B;
+            --error-color: #E53935; /* Stronger red for errors */
+            --warning-color: #FFB300; /* Amber for warnings */
+            --info-color: #2196F3; /* Blue for info messages */
+
+            /* RGB values for rgba() colors for transparent overlays */
+            --card-bg-color-rgb: 45, 64, 45; /* 2D402D */
         }
 
-        /* --- Theme definitions (muted and high contrast) --- */
-        .dark-mode { /* Default */
-            --primary-color: #E0EAE0; --accent-color: #6A9A6A; --bg-color: #0F1A0F; --card-bg-color: #1C2B1C; --text-color: #E0EAE0; --border-color: #384A38; --input-bg-color: #2A3B2A; --button-bg-color: #558A55; --button-text-color: #F0F5F0;
-            --bg-gradient-start: #1A2A1A; --bg-gradient-end: #0B140B;
-        }
-        .theme-blue {
-            --primary-color: #DDEBF0; --accent-color: #4FB0CC; --bg-color: #0B4F6C; --card-bg-color: #176587; --text-color: #DDEBF0; --border-color: #3A7B9A; --input-bg-color: #2B5F7F; --button-bg-color: #408BB0; --button-text-color: #E0F5F8;
-            --bg-gradient-start: #176587; --bg-gradient-end: #0B4F6C;
-        }
-        .theme-purple {
-            --primary-color: #E8E0EC; --accent-color: #8C5BB0; --bg-color: #3C1E5B; --card-bg-color: #4B2A6B; --text-color: #E8E0EC; --border-color: #6A3A8A; --input-bg-color: #5A3A7A; --button-bg-color: #7B4BA0; --button-text-color: #F0E5F5;
-            --bg-gradient-start: #4B2A6B; --bg-gradient-end: #3C1E5B;
-        }
-        .theme-orange {
-            --primary-color: #F5E9DD; --accent-color: #D67F2C; --bg-color: #8C4B1E; --card-bg-color: #A05F2F; --text-color: #F5E9DD; --border-color: #B07B4A; --input-bg-color: #A06B3A; --button-bg-color: #C08B5B; --button-text-color: #FAECD9;
-            --bg-gradient-start: #A05F2F; --bg-gradient-end: #8C4B1E;
-        }
-        .theme-red {
-            --primary-color: #F0E3E3; --accent-color: #B04F4F; --bg-color: #7A2F2F; --card-bg-color: #8A3A3A; --text-color: #F0E3E3; --border-color: #A04A4A; --input-bg-color: #903A3A; --button-bg-color: #B05B5B; --button-text-color: #F5EDED;
-            --bg-gradient-start: #8A3A3A; --bg-gradient-end: #7A2F2F;
-        }
-        .theme-teal {
-            --primary-color: #E0EFEF; --accent-color: #4FB0B0; --bg-color: #0F5A5A; --card-bg-color: #1C6B6B; --text-color: #E0EFEF; --border-color: #388A8A; --input-bg-color: #2A7B7B; --button-bg-color: #559A9A; --button-text-color: #E5F5F5;
-            --bg-gradient-start: #1C6B6B; --bg-gradient-end: #0F5A5A;
-        }
-        .theme-indigo {
-            --primary-color: #E3E5F0; --accent-color: #5B6AB0; --bg-color: #2A3B7A; --card-bg-color: #3C4E8C; --text-color: #E3E5F0; --border-color: #4A5A9A; --input-bg-color: #3A4A8A; --button-bg-color: #6A7BC0; --button-text-color: #E8ECF5;
-            --bg-gradient-start: #3C4E8C; --bg-gradient-end: #2A3B7A;
+        /* Dark Mode */
+        .dark-mode {
+            --primary-color: #DCE7DC;
+            --accent-color: #558B55;
+            --bg-color: #1A2A1A;
+            --card-bg-color: #2D402D;
+            --text-color: #DCE7DC;
+            --border-color: #4A6B4A;
+            --input-bg-color: #3C503C;
+            --button-bg-color: #6AA66A;
+            --button-text-color: #1A2A1A;
+            --card-bg-color-rgb: 45, 64, 45;
         }
 
-        .background-shapes {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
-            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+        /* Blue Mode */
+        .blue-mode {
+            --primary-color: #BBDEFB;
+            --accent-color: #2196F3;
+            --bg-color: #0D2B4F;
+            --card-bg-color: #1A3F6A;
+            --text-color: #BBDEFB;
+            --border-color: #2D6CA4;
+            --input-bg-color: #254F7F;
+            --button-bg-color: #4CAF50; /* Keep green for actions, or use blue: #2196F3 */
+            --button-text-color: #FFFFFF;
+            --card-bg-color-rgb: 26, 63, 106;
         }
 
-        .shape-1 {
-            position: absolute;
-            top: -10%;
-            left: -10%;
-            width: 40%;
-            height: 40%;
-            background: rgba(var(--accent-color-rgb, 106, 154, 106), 0.1);
-            border-radius: 50%;
-            filter: blur(50px);
-            animation: float1 15s infinite ease-in-out alternate;
-        }
-        .shape-2 {
-            position: absolute;
-            bottom: -15%;
-            right: -15%;
-            width: 50%;
-            height: 50%;
-            background: rgba(var(--primary-color-rgb, 224, 234, 224), 0.08);
-            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-            filter: blur(60px);
-            animation: float2 20s infinite ease-in-out alternate;
-        }
-        .shape-3 {
-            position: absolute;
-            top: 20%;
-            right: 5%;
-            width: 25%;
-            height: 25%;
-            background: rgba(var(--button-bg-color-rgb, 85, 138, 85), 0.15);
-            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-            filter: blur(40px);
-            animation: float3 18s infinite ease-in-out alternate;
+        /* Purple Mode */
+        .purple-mode {
+            --primary-color: #E1BEE7;
+            --accent-color: #9C27B0;
+            --bg-color: #2A0D3A;
+            --card-bg-color: #451A5A;
+            --text-color: #E1BEE7;
+            --border-color: #6E2F82;
+            --input-bg-color: #5A2970;
+            --button-bg-color: #4CAF50; /* Keep green for actions */
+            --button-text-color: #FFFFFF;
+            --card-bg-color-rgb: 69, 26, 90;
         }
 
-        @keyframes float1 {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(20px, 30px) rotate(5deg); }
-        }
-        @keyframes float2 {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(-30px, -20px) rotate(-8deg); }
-        }
-        @keyframes float3 {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(10px, -15px) rotate(10deg); }
+        /* Orange Mode */
+        .orange-mode {
+            --primary-color: #FFECB3;
+            --accent-color: #FF9800;
+            --bg-color: #3A2300;
+            --card-bg-color: #5A3900;
+            --text-color: #FFECB3;
+            --border-color: #8C5B00;
+            --input-bg-color: #7A4F00;
+            --button-bg-color: #4CAF50; /* Keep green for actions */
+            --button-text-color: #FFFFFF;
+            --card-bg-color-rgb: 90, 57, 0;
         }
 
-        /* Utility to get RGB values from CSS variables for rgba() */
-        :root {
-            --accent-color-rgb: 106, 154, 106; /* Default for greenish-white */
-            --primary-color-rgb: 224, 234, 224;
-            --button-bg-color-rgb: 85, 138, 85;
-            --card-bg-color-rgb: 28, 43, 28;
+        /* Red Mode */
+        .red-mode {
+            --primary-color: #FFCDD2;
+            --accent-color: #F44336;
+            --bg-color: #3A0D0D;
+            --card-bg-color: #5A1A1A;
+            --text-color: #FFCDD2;
+            --border-color: #8C2A2A;
+            --input-bg-color: #7A2929;
+            --button-bg-color: #4CAF50; /* Keep green for actions */
+            --button-text-color: #FFFFFF;
+            --card-bg-color-rgb: 90, 26, 26;
         }
-        .theme-blue {
-            --accent-color-rgb: 79, 176, 204;
-            --primary-color-rgb: 221, 235, 240;
-            --button-bg-color-rgb: 64, 139, 176;
-            --card-bg-color-rgb: 23, 101, 135;
+
+        /* Teal Mode */
+        .teal-mode {
+            --primary-color: #B2DFDB;
+            --accent-color: #009688;
+            --bg-color: #0D3A3A;
+            --card-bg-color: #1A5A5A;
+            --text-color: #B2DFDB;
+            --border-color: #2A8C8C;
+            --input-bg-color: #297A7A;
+            --button-bg-color: #4CAF50; /* Keep green for actions */
+            --button-text-color: #FFFFFF;
+            --card-bg-color-rgb: 26, 90, 90;
         }
-        .theme-purple {
-            --accent-color-rgb: 140, 91, 176;
-            --primary-color-rgb: 232, 224, 236;
-            --button-bg-color-rgb: 123, 75, 160;
-            --card-bg-color-rgb: 75, 42, 107;
-        }
-        .theme-orange {
-            --accent-color-rgb: 214, 127, 44;
-            --primary-color-rgb: 245, 233, 221;
-            --button-bg-color-rgb: 192, 139, 91;
-            --card-bg-color-rgb: 160, 95, 47;
-        }
-        .theme-red {
-            --accent-color-rgb: 176, 79, 79;
-            --primary-color-rgb: 240, 227, 227;
-            --button-bg-color-rgb: 176, 91, 91;
-            --card-bg-color-rgb: 138, 58, 58;
-        }
-        .theme-teal {
-            --accent-color-rgb: 79, 176, 176;
-            --primary-color-rgb: 224, 239, 239;
-            --button-bg-color-rgb: 85, 154, 154;
-            --card-bg-color-rgb: 28, 107, 107;
-        }
-        .theme-indigo {
-            --accent-color-rgb: 91, 106, 176;
-            --primary-color-rgb: 227, 229, 240;
-            --button-bg-color-rgb: 106, 123, 192;
-            --card-bg-color-rgb: 60, 78, 140;
+
+        /* Indigo Mode */
+        .indigo-mode {
+            --primary-color: #C5CAE9;
+            --accent-color: #3F51B5;
+            --bg-color: #1A1D3A;
+            --card-bg-color: #2D305A;
+            --text-color: #C5CAE9;
+            --border-color: #4A4D8C;
+            --input-bg-color: #3C3F7A;
+            --button-bg-color: #4CAF50; /* Keep green for actions */
+            --button-text-color: #FFFFFF;
+            --card-bg-color-rgb: 45, 48, 90;
         }
 
 
+        /* Utility Classes */
         .card {
             background-color: var(--card-bg-color);
             border: 1px solid var(--border-color);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            color: var(--text-color);
         }
+
         .input-field {
             background-color: var(--input-bg-color);
-            border: 1px solid var(--border-color);
             color: var(--text-color);
+            border: 1px solid var(--border-color);
         }
+        .input-field::placeholder {
+            color: rgba(var(--text-color-rgb), 0.7); /* Lighter placeholder */
+        }
+        .input-field:focus {
+            border-color: var(--accent-color);
+        }
+
         .btn-primary {
             background-color: var(--button-bg-color);
             color: var(--button-text-color);
-            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            transition: background-color 0.3s ease;
         }
         .btn-primary:hover {
             background-color: var(--accent-color);
-            transform: translateY(-1px);
+            color: var(--primary-color);
         }
-        .btn-primary:active {
-            transform: translateY(1px);
+
+        .btn-secondary {
+            background-color: var(--input-bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
-        .error-message {
-            color: var(--error-color);
+        .btn-secondary:hover {
+            background-color: var(--border-color);
+            border-color: var(--accent-color);
         }
+
+        .btn-danger {
+            background-color: var(--error-color);
+            color: #FFFFFF;
+            transition: background-color 0.3s ease;
+        }
+        .btn-danger:hover {
+            background-color: #C62828; /* Darker red on hover */
+        }
+
+        .text-primary-color { color: var(--primary-color); }
+        .text-accent-color { color: var(--accent-color); }
+        .text-text-color { color: var(--text-color); }
+        .text-info-color { color: var(--info-color); }
+        .text-error-color { color: var(--error-color); }
+
         .app-title {
             font-family: 'Orbitron', sans-serif;
             font-weight: 700;
             background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            font-size: 2.8rem; /* Slightly bigger */
         }
+        @media (max-width: 768px) {
+            .app-title {
+                font-size: 2.2rem; /* Adjust title size for mobile */
+            }
+        }
+
+        /* Login Page Background Elements */
+        .login-bg-shapes {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .login-bg-shapes::before,
+        .login-bg-shapes::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.15; /* Subtle */
+            filter: blur(80px); /* Smooth blur */
+        }
+
+        .login-bg-shapes::before {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, var(--accent-color), transparent);
+            top: -100px;
+            left: -100px;
+            animation: floatShape1 15s infinite ease-in-out alternate;
+        }
+
+        .login-bg-shapes::after {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, var(--primary-color), transparent);
+            bottom: -50px;
+            right: -50px;
+            animation: floatShape2 20s infinite ease-in-out alternate-reverse;
+        }
+
+        @keyframes floatShape1 {
+            0% { transform: translate(0, 0); }
+            50% { transform: translate(50px, 50px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        @keyframes floatShape2 {
+            0% { transform: translate(0, 0); }
+            50% { transform: translate(-50px, -50px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        /* Ensure login-container is above shapes */
+        .login-container {
+            position: relative;
+            z-index: 1;
+        }
+
     </style>
 </head>
-<body class="flex flex-col justify-center items-center min-h-screen p-4">
-    <div class="background-shapes">
-        <div class="shape-1"></div>
-        <div class="shape-2"></div>
-        <div class="shape-3"></div>
-    </div>
-    <div class="card p-8 rounded-xl shadow-lg w-full max-w-md relative z-10">
+<body>
+    <div class="login-bg-shapes"></div>
+    <div class="login-container w-full max-w-md p-8 space-y-6 bg-card-bg-color rounded-xl shadow-lg">
         <h1 class="text-4xl font-bold text-center mb-6 app-title">Rclone WebGUI Login</h1>
         {% if error %}
         <p class="error-message text-center mb-4 text-red-400">{{ error }}</p>
@@ -236,10 +296,10 @@
     </div>
 
     <script>
-        // Apply saved theme on page load
+        // Apply saved theme on page load (ensure it's already done by the inline script)
         document.addEventListener('DOMContentLoaded', () => {
             const savedTheme = localStorage.getItem('theme') || 'dark-mode';
-            document.body.className = savedTheme;
+            document.documentElement.className = savedTheme;
         });
     </script>
 </body>
