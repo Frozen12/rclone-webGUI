@@ -1,7 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#6A9A6A">
+  <!-- Globe outline -->
   <circle cx="12" cy="12" r="10" stroke="#6A9A6A" stroke-width="1.5" fill="none"/>
+  <!-- Latitude and Longitude lines (simplified) -->
   <path d="M12 2a10 10 0 0 0 0 20v-20zM2 12h20" stroke="#6A9A6A" stroke-width="1"/>
   <ellipse cx="12" cy="12" rx="5" ry="10" stroke="#6A9A6A" stroke-width="1" fill="none" transform="rotate(30 12 12)"/>
 
+  <!-- Paper plane icon -->
   <path d="M21 3L10 12M21 3l-7 18-3-9-9-3 18-7z" fill="#DCE7DC" transform="scale(0.7) translate(4, 4) rotate(-45 12 12)"/>
 </svg>
