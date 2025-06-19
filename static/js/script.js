@@ -6,6 +6,7 @@ const app = Vue.createApp({
             // UI State
             activeSection: 'rclone', // 'rclone', 'setup', 'terminal'
             showRecentCommandsModal: false,
+            showMobileNav: false, // For responsive sidebar
             modeDescription: 'Make source and destination identical.', // Initial description for 'sync'
             showDestinationField: true, // Initially true for 'sync'
             rcloneSpinnerVisible: false,
@@ -53,6 +54,12 @@ const app = Vue.createApp({
             handler: 'updateModeDescription',
             immediate: true // Run immediately on component mount
         },
+        // Watch for changes in any form field to update the live command preview
+        rcloneForm: {
+            handler: 'updateRcloneCommandPreview',
+            deep: true, // Watch nested properties
+            immediate: true, // Run immediately on component mount
+        },
         activeSection(newVal) {
             // Stop polling when switching away from terminal
             if (newVal !== 'terminal' && this.terminalPollInterval) {
@@ -62,6 +69,10 @@ const app = Vue.createApp({
                 // Start polling when switching to terminal and not already polling
                 this.startTerminalPolling();
             }
+            // Ensure mobile nav closes when section is selected
+            if (this.showMobileNav) {
+                this.showMobileNav = false;
+            }
         },
         terminalProcessRunning(newVal) {
             if (newVal) {
@@ -69,6 +80,14 @@ const app = Vue.createApp({
             } else {
                 clearInterval(this.terminalPollInterval);
                 this.terminalPollInterval = null;
+            }
+        },
+        showRecentCommandsModal(newVal) {
+            // Disable body scrolling when modal is open
+            if (newVal) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
             }
         }
     },
@@ -81,11 +100,15 @@ const app = Vue.createApp({
         this.darkMode = savedDarkMode;
         this.applyTheme();
         this.toggleDestinationField(); // Ensure correct initial state
+        this.updateRcloneCommandPreview(); // Initial preview generation
     },
     methods: {
         // --- UI Toggling & Theme Management ---
         toggleSection(section) {
             this.activeSection = section;
+        },
+        toggleMobileNav() {
+            this.showMobileNav = !this.showMobileNav;
         },
         logout() {
             // Simple redirect to logout endpoint
@@ -103,8 +126,8 @@ const app = Vue.createApp({
         },
         applyTheme() {
             const body = document.body;
-            // Remove previous theme classes
-            body.className = body.className.split(' ').filter(c => !c.startsWith('body-theme-') && !c.startsWith('theme-')).join(' ');
+            // Remove previous theme classes starting with 'body-'
+            body.className = body.className.split(' ').filter(c => !c.startsWith('body-')).join(' ');
             
             // Apply new theme class to body
             body.classList.add(`body-${this.currentTheme}`);
@@ -117,9 +140,6 @@ const app = Vue.createApp({
             }
 
             // Update CSS variables for dynamic styling. This requires the CSS to have :root and .dark rules.
-            // For the header gradient, we use direct Tailwind classes on header, but dynamic CSS variables can
-            // override the base colors if setup correctly. The approach in style.css directly uses CSS vars.
-            // Here, we also set RGB values for focus rings if the CSS variable is used for that.
             const style = getComputedStyle(document.body);
             const accentColor = style.getPropertyValue('--color-accent');
             if (accentColor) {
@@ -130,13 +150,12 @@ const app = Vue.createApp({
                 } else if (accentColor.startsWith('rgb')) {
                     rgb = accentColor.match(/\d+/g).map(Number);
                 }
-                document.documentElement.style.setProperty('--color-accent-rgb', rgb.join(','));
-                document.documentElement.style.setProperty('--color-accent-glow', `rgba(${rgb.join(',')}, 0.4)`);
+                document.documentElement.style.setProperty('--color-accent-rgb-val', rgb.join(',')); // Added for glow effect
             }
         },
 
 
-        // --- Rclone Mode Logic ---
+        // --- Rclone Mode Logic & Command Preview ---
         updateModeDescription() {
             const modeDescriptions = {
                 "sync": "Make source and destination identical.",
@@ -162,10 +181,59 @@ const app = Vue.createApp({
             };
             this.modeDescription = modeDescriptions[this.rcloneForm.mode] || '';
             this.toggleDestinationField();
+            this.updateRcloneCommandPreview(); // Update preview when mode changes
         },
         toggleDestinationField() {
             const twoRemoteModes = ["sync", "copy", "move", "copyurl", "check", "cryptcheck"];
             this.showDestinationField = twoRemoteModes.includes(this.rcloneForm.mode);
+        },
+        updateRcloneCommandPreview() {
+            const form = this.rcloneForm;
+            let preview = `rclone ${form.mode}`;
+
+            const oneRemoteModes = [
+                "lsd", "ls", "tree", "listremotes", "mkdir", "size", "serve", "dedupe",
+                "cleanup", "checksum", "delete", "deletefile", "purge", "version"
+            ];
+            const twoRemoteModes = [
+                "sync", "copy", "move", "copyurl", "check", "cryptcheck"
+            ];
+
+            if (twoRemoteModes.includes(form.mode)) {
+                if (form.source) preview += ` "${form.source}"`;
+                if (form.destination) preview += ` "${form.destination}"`;
+            } else if (oneRemoteModes.includes(form.mode)) {
+                if (form.source) preview += ` "${form.source}"`; // Source acts as path
+            }
+
+            preview += ` --transfers=${form.transfers}`;
+            preview += ` --checkers=${form.checkers}`;
+            preview += ` --buffer-size=${form.buffer_size}`;
+            preview += ` --log-level=${form.log_level.toUpperCase()}`; // Ensure uppercase
+            preview += ` --order-by="${form.order}"`;
+
+            if (form.use_drive_trash) preview += ` --drive-use-trash=true`;
+            if (form.service_account) preview += ` --drive-service-account-directory=/app/.config/rclone/sa-accounts`; // Simplified for preview
+            if (form.dry_run) preview += ` --dry-run`;
+            
+            // Add static Rclone Env variables as flags for preview clarity
+            preview += ` --config=/app/.config/rclone/rclone.conf`;
+            preview += ` --fast-list`;
+            preview += ` --drive-tpslimit=3`;
+            preview += ` --drive-acknowledge-abuse`;
+            preview += ` --log-file=/content/rcloneLog.txt`;
+            preview += ` --verbose=2`;
+            preview += ` --drive-pacer-min-sleep=50ms`;
+            preview += ` --drive-pacer-burst=2`;
+            preview += ` --server-side-across-configs`;
+            preview += ` --progress --color=NEVER --stats=3s --cutoff-mode=SOFT`;
+
+
+            if (form.additional_flags) {
+                preview += ` ${form.additional_flags.trim()}`;
+            }
+
+            this.rcloneCommandPreview = preview;
         },
 
         // --- Spinner Control ---
@@ -193,7 +261,7 @@ const app = Vue.createApp({
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
 
-            this.updateOutput(outputArea, { status: 'info', message: 'Uploading...' });
+            this.updateOutput(outputArea, { status: 'info', message: '<i class="fas fa-spinner fa-spin mr-2"></i> Uploading...' });
 
             try {
                 const response = await fetch(endpoint, {
@@ -220,7 +288,7 @@ const app = Vue.createApp({
             this.showRcloneSpinner();
             this.rcloneLiveOutput = ''; // Clear previous output
             this.rcloneTransferRunning = true;
-            this.updateOutput('majorStepsOutput', { status: 'info', message: 'Initiating Rclone transfer...' });
+            this.updateOutput('majorStepsOutput', { status: 'info', message: '<i class="fas fa-play mr-2"></i> Initiating Rclone transfer...' });
 
             try {
                 const response = await fetch('/execute-rclone', {
@@ -258,7 +326,12 @@ const app = Vue.createApp({
                                         // Final status message
                                         this.updateOutput('majorStepsOutput', data);
                                         this.rcloneLiveOutput += data.output + '\n';
-                                        this.rcloneLiveOutputElement.className = `output-area text-sm overflow-auto max-h-64 ${data.status === 'complete' ? 'success' : 'error'}`;
+                                        // Use nextTick to ensure DOM is updated before applying class
+                                        this.$nextTick(() => {
+                                            if (this.rcloneLiveOutputElement) {
+                                                this.rcloneLiveOutputElement.className = `output-area text-sm overflow-auto max-h-96 ${data.status === 'complete' ? 'success' : 'error'}`;
+                                            }
+                                        });
                                     }
                                 } catch (e) {
                                     console.error("Error parsing JSON line:", e, "Line:", line);
@@ -274,7 +347,11 @@ const app = Vue.createApp({
                         const data = JSON.parse(buffer);
                         this.updateOutput('majorStepsOutput', data);
                         this.rcloneLiveOutput += data.output + '\n';
-                        this.rcloneLiveOutputElement.className = `output-area text-sm overflow-auto max-h-64 ${data.status === 'complete' ? 'success' : 'error'}`;
+                        this.$nextTick(() => {
+                            if (this.rcloneLiveOutputElement) {
+                                this.rcloneLiveOutputElement.className = `output-area text-sm overflow-auto max-h-96 ${data.status === 'complete' ? 'success' : 'error'}`;
+                            }
+                        });
                     } catch (e) {
                         console.error("Error parsing final JSON buffer:", e, "Buffer:", buffer);
                     }
@@ -288,9 +365,13 @@ const app = Vue.createApp({
                 });
 
             } catch (error) {
-                this.updateOutput('majorStepsOutput', { status: 'error', message: `Rclone transfer failed: ${error.message}` });
+                this.updateOutput('majorStepsOutput', { status: 'error', message: `<i class="fas fa-times-circle mr-2"></i> Rclone transfer failed: ${error.message}` });
                 this.rcloneLiveOutput += `Error: ${error.message}\n`;
-                this.rcloneLiveOutputElement.className = 'output-area text-sm overflow-auto max-h-64 error';
+                this.$nextTick(() => {
+                    if (this.rcloneLiveOutputElement) {
+                        this.rcloneLiveOutputElement.className = 'output-area text-sm overflow-auto max-h-96 error';
+                    }
+                });
             } finally {
                 this.hideRcloneSpinner();
                 this.rcloneTransferRunning = false;
@@ -304,7 +385,7 @@ const app = Vue.createApp({
             // will just update the UI state. A more robust solution would involve storing
             // the subprocess PID on the server and sending a termination signal.
             // For now, it will simply indicate that the transfer cannot be stopped from UI easily.
-            this.updateOutput('majorStepsOutput', { status: 'info', message: 'Stopping Rclone transfer not directly supported via UI. Please refresh page if needed.' });
+            this.updateOutput('majorStepsOutput', { status: 'info', message: '<i class="fas fa-info-circle mr-2"></i> Stopping Rclone transfer not directly supported via UI. Please refresh page if needed.' });
             // This is a placeholder; actual backend stop logic is complex for streaming processes.
             // If the backend `execute-rclone` were designed with a PID tracker, you'd call an endpoint here.
             // For now, it's illustrative.
@@ -325,7 +406,7 @@ const app = Vue.createApp({
 
             this.showTerminalSpinner();
             this.terminalOutput = ''; // Clear previous output
-            this.updateOutput('majorStepsOutput', { status: 'info', message: 'Executing terminal command...' });
+            this.updateOutput('majorStepsOutput', { status: 'info', message: '<i class="fas fa-play mr-2"></i> Executing terminal command...' });
             
             try {
                 const response = await fetch('/execute_terminal_command', {
@@ -366,7 +447,7 @@ const app = Vue.createApp({
                 this.saveCommandToHistory('terminal', this.terminalCommand);
 
             } catch (error) {
-                this.updateOutput('majorStepsOutput', { status: 'error', message: `Terminal command execution failed: ${error.message}` });
+                this.updateOutput('majorStepsOutput', { status: 'error', message: `<i class="fas fa-times-circle mr-2"></i> Terminal command execution failed: ${error.message}` });
                 this.hideTerminalSpinner();
             }
         },
@@ -375,6 +456,7 @@ const app = Vue.createApp({
             if (this.terminalPollInterval) {
                 clearInterval(this.terminalPollInterval);
             }
+            // Check terminal process status periodically
             this.terminalPollInterval = setInterval(this.getTerminalOutput, 1000); // Poll every 1 second
             console.log("Started terminal polling.");
         },
@@ -391,12 +473,12 @@ const app = Vue.createApp({
                 if (!data.is_running && !this.terminalSpinnerVisible) { // If not running and spinner is already hidden
                     clearInterval(this.terminalPollInterval);
                     this.terminalPollInterval = null;
-                    this.updateOutput('majorStepsOutput', { status: 'complete', message: 'Terminal process finished.' });
+                    this.updateOutput('majorStepsOutput', { status: 'complete', message: '<i class="fas fa-check-circle mr-2"></i> Terminal process finished.' });
                     console.log("Stopped terminal polling: process finished.");
                 }
             } catch (error) {
                 console.error("Error fetching terminal output:", error);
-                this.updateOutput('majorStepsOutput', { status: 'error', message: `Failed to fetch terminal output: ${error.message}` });
+                this.updateOutput('majorStepsOutput', { status: 'error', message: `<i class="fas fa-times-circle mr-2"></i> Failed to fetch terminal output: ${error.message}` });
                 this.hideTerminalSpinner();
                 clearInterval(this.terminalPollInterval);
                 this.terminalPollInterval = null;
@@ -405,7 +487,7 @@ const app = Vue.createApp({
 
         async stopTerminalProcess() {
             this.showTerminalSpinner();
-            this.updateOutput('majorStepsOutput', { status: 'info', message: 'Attempting to stop terminal process...' });
+            this.updateOutput('majorStepsOutput', { status: 'info', message: '<i class="fas fa-stop-circle mr-2"></i> Attempting to stop terminal process...' });
             try {
                 const response = await fetch('/stop_terminal_process', { method: 'POST' });
                 const data = await response.json();
@@ -416,7 +498,7 @@ const app = Vue.createApp({
                     this.terminalPollInterval = null;
                 }
             } catch (error) {
-                this.updateOutput('majorStepsOutput', { status: 'error', message: `Failed to stop terminal process: ${error.message}` });
+                this.updateOutput('majorStepsOutput', { status: 'error', message: `<i class="fas fa-times-circle mr-2"></i> Failed to stop terminal process: ${error.message}` });
             } finally {
                 this.hideTerminalSpinner();
             }
@@ -424,6 +506,17 @@ const app = Vue.createApp({
 
         clearTerminalOutput() {
             this.terminalOutput = '';
+            // Also clear the actual log file on the backend for a true "clear"
+            fetch('/clear_terminal_log', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Terminal log cleared on backend:", data.message);
+                    this.updateOutput('majorStepsOutput', { status: 'info', message: '<i class="fas fa-eraser mr-2"></i> Terminal output cleared.' });
+                })
+                .catch(error => {
+                    console.error("Error clearing backend terminal log:", error);
+                    this.updateOutput('majorStepsOutput', { status: 'error', message: `<i class="fas fa-times-circle mr-2"></i> Failed to clear backend terminal log.` });
+                });
         },
 
         // --- Recent Commands History ---
@@ -473,7 +566,7 @@ const app = Vue.createApp({
             this.showRecentCommandsModal = false; // Close modal
             this.activeSection = 'rclone'; // Switch to Rclone tab
             this.updateModeDescription(); // Update description and destination field visibility
-            this.updateOutput('majorStepsOutput', { status: 'info', message: 'Rclone form populated from history.' });
+            this.updateOutput('majorStepsOutput', { status: 'info', message: '<i class="fas fa-paste mr-2"></i> Rclone form populated from history.' });
         },
 
         copyToClipboard(text) {
@@ -484,10 +577,10 @@ const app = Vue.createApp({
             tempInput.select();
             try {
                 document.execCommand('copy');
-                this.updateOutput('majorStepsOutput', { status: 'success', message: 'Command copied to clipboard!' });
+                this.updateOutput('majorStepsOutput', { status: 'success', message: '<i class="fas fa-clipboard-check mr-2"></i> Command copied to clipboard!' });
             } catch (err) {
                 console.error('Could not copy text: ', err);
-                this.updateOutput('majorStepsOutput', { status: 'error', message: 'Failed to copy command.' });
+                this.updateOutput('majorStepsOutput', { status: 'error', message: '<i class="fas fa-times-circle mr-2"></i> Failed to copy command.' });
             }
             document.body.removeChild(tempInput);
         },
@@ -497,6 +590,7 @@ const app = Vue.createApp({
             let targetOutput = '';
             let targetElement = null;
 
+            // Update data properties
             if (outputRef === 'majorStepsOutput') {
                 this.majorStepsOutput = data.message;
                 targetElement = document.getElementById('majorStepsOutput');
@@ -508,9 +602,12 @@ const app = Vue.createApp({
                 targetElement = document.getElementById('terminalOutput');
             }
 
+            // Apply classes to target element for styling
             if (targetElement) {
-                targetElement.className = `output-area text-sm ${data.status === 'success' || data.status === 'complete' ? 'success' : data.status === 'error' ? 'error' : 'text-gray-700 dark:text-gray-300'}`;
-                this.scrollToBottom(outputRef);
+                this.$nextTick(() => { // Ensure DOM is updated before applying classes
+                    targetElement.className = `output-area text-sm overflow-auto max-h-96 ${data.status === 'success' || data.status === 'complete' ? 'success' : data.status === 'error' ? 'error' : 'text-gray-700 dark:text-gray-300'}`;
+                    this.scrollToBottom(outputRef);
+                });
             }
         },
 
@@ -527,6 +624,15 @@ const app = Vue.createApp({
         },
         terminalOutputElement() {
             return document.getElementById('terminalOutput');
+        },
+        rcloneCommandPreview: {
+            get() {
+                // This will be updated by updateRcloneCommandPreview method
+                return this._rcloneCommandPreview || '';
+            },
+            set(value) {
+                this._rcloneCommandPreview = value;
+            }
         }
     }
 });
