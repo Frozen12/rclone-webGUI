@@ -8,52 +8,57 @@ body {
 
 /* Color Variables - Default Greenish White Monochromatic */
 :root {
-    --primary-color: #E6FFE6; /* Light greenish-white */
-    --accent-color: #A3D9A5; /* Muted green */
-    --bg-color: #0E180E; /* Dark background */
-    --card-bg-color: #1A2A1A; /* Slightly lighter dark for cards */
-    --text-color: #E6FFE6; /* Light text */
-    --border-color: #3A4E3A; /* Darker green border */
-    --input-bg-color: #2C3E2C;
-    --button-bg-color: #5BAA60;
-    --button-text-color: #0E180E;
+    --primary-color: #E0EAE0; /* Soft greenish-white */
+    --accent-color: #6A9A6A; /* Muted deep green */
+    --bg-color: #0F1A0F; /* Dark background */
+    --card-bg-color: #1C2B1C; /* Slightly lighter dark for cards */
+    --text-color: #E0EAE0; /* Light text */
+    --border-color: #384A38; /* Darker green border */
+    --input-bg-color: #2A3B2A;
+    --button-bg-color: #558A55;
+    --button-text-color: #F0F5F0; /* Slightly off-white for button text */
     --success-color: #4CAF50;
     --error-color: #F44336;
     --warning-color: #FFC107;
     --info-color: #2196F3;
+
+    /* RGB values for rgba() colors */
+    --accent-color-rgb: 106, 154, 106;
+    --primary-color-rgb: 224, 234, 224;
+    --button-bg-color-rgb: 85, 138, 85;
+    --card-bg-color-rgb: 28, 43, 28;
 }
 
 /* Dark Mode (Default) - Explicitly defined for clarity, though it's the root default */
 .dark-mode {
-    --primary-color: #E6FFE6;
-    --accent-color: #A3D9A5;
-    --bg-color: #0E180E;
-    --card-bg-color: #1A2A1A;
-    --text-color: #E6FFE6;
-    --border-color: #3A4E3A;
-    --input-bg-color: #2C3E2C;
-    --button-bg-color: #5BAA60;
-    --button-text-color: #0E180E;
+    --primary-color: #E0EAE0; --accent-color: #6A9A6A; --bg-color: #0F1A0F; --card-bg-color: #1C2B1C; --text-color: #E0EAE0; --border-color: #384A38; --input-bg-color: #2A3B2A; --button-bg-color: #558A55; --button-text-color: #F0F5F0;
+    --accent-color-rgb: 106, 154, 106; --primary-color-rgb: 224, 234, 224; --button-bg-color-rgb: 85, 138, 85; --card-bg-color-rgb: 28, 43, 28;
 }
 
-/* Additional Themes */
+/* Additional Themes (Muted and Higher Contrast) */
 .theme-blue {
-    --primary-color: #E0F7FA; --accent-color: #80DEEA; --bg-color: #01579B; --card-bg-color: #0277BD; --text-color: #E0F7FA; --border-color: #00BCD4; --input-bg-color: #0288D1; --button-bg-color: #00ACC1; --button-text-color: #E0F7FA;
+    --primary-color: #DDEBF0; --accent-color: #4FB0CC; --bg-color: #0B4F6C; --card-bg-color: #176587; --text-color: #DDEBF0; --border-color: #3A7B9A; --input-bg-color: #2B5F7F; --button-bg-color: #408BB0; --button-text-color: #E0F5F8;
+    --accent-color-rgb: 79, 176, 204; --primary-color-rgb: 221, 235, 240; --button-bg-color-rgb: 64, 139, 176; --card-bg-color-rgb: 23, 101, 135;
 }
 .theme-purple {
-    --primary-color: #F3E5F5; --accent-color: #CE93D8; --bg-color: #4A148C; --card-bg-color: #6A1B9A; --text-color: #F3E5F5; --border-color: #9C27B0; --input-bg-color: #8E24AA; --button-bg-color: #8E24AA; --button-text-color: #F3E5F5;
+    --primary-color: #E8E0EC; --accent-color: #8C5BB0; --bg-color: #3C1E5B; --card-bg-color: #4B2A6B; --text-color: #E8E0EC; --border-color: #6A3A8A; --input-bg-color: #5A3A7A; --button-bg-color: #7B4BA0; --button-text-color: #F0E5F5;
+    --accent-color-rgb: 140, 91, 176; --primary-color-rgb: 232, 224, 236; --button-bg-color-rgb: 123, 75, 160; --card-bg-color-rgb: 75, 42, 107;
 }
 .theme-orange {
-    --primary-color: #FFF3E0; --accent-color: #FFCC80; --bg-color: #E65100; --card-bg-color: #EF6C00; --text-color: #FFF3E0; --border-color: #FB8C00; --input-bg-color: #F57C00; --button-bg-color: #FB8C00; --button-text-color: #FFF3E0;
+    --primary-color: #F5E9DD; --accent-color: #D67F2C; --bg-color: #8C4B1E; --card-bg-color: #A05F2F; --text-color: #F5E9DD; --border-color: #B07B4A; --input-bg-color: #A06B3A; --button-bg-color: #C08B5B; --button-text-color: #FAECD9;
+    --accent-color-rgb: 214, 127, 44; --primary-color-rgb: 245, 233, 221; --button-bg-color-rgb: 192, 139, 91; --card-bg-color-rgb: 160, 95, 47;
 }
 .theme-red {
-    --primary-color: #FFEBEE; --accent-color: #EF9A9A; --bg-color: #B71C1C; --card-bg-color: #C62828; --text-color: #FFEBEE; --border-color: #E53935; --input-bg-color: #D32F2F; --button-bg-color: #E53935; --button-text-color: #FFEBEE;
+    --primary-color: #F0E3E3; --accent-color: #B04F4F; --bg-color: #7A2F2F; --card-bg-color: #8A3A3A; --text-color: #F0E3E3; --border-color: #A04A4A; --input-bg-color: #903A3A; --button-bg-color: #B05B5B; --button-text-color: #F5EDED;
+    --accent-color-rgb: 176, 79, 79; --primary-color-rgb: 240, 227, 227; --button-bg-color-rgb: 176, 91, 91; --card-bg-color-rgb: 138, 58, 58;
 }
 .theme-teal {
-    --primary-color: #E0F2F7; --accent-color: #80CBC4; --bg-color: #006064; --card-bg-color: #00838F; --text-color: #E0F2F7; --border-color: #00ACC1; --input-bg-color: #0097A7; --button-bg-color: #00ACC1; --button-text-color: #E0F2F7;
+    --primary-color: #E0EFEF; --accent-color: #4FB0B0; --bg-color: #0F5A5A; --card-bg-color: #1C6B6B; --text-color: #E0EFEF; --border-color: #388A8A; --input-bg-color: #2A7B7B; --button-bg-color: #559A9A; --button-text-color: #E5F5F5;
+    --accent-color-rgb: 79, 176, 176; --primary-color-rgb: 224, 239, 239; --button-bg-color-rgb: 85, 154, 154; --card-bg-color-rgb: 28, 107, 107;
 }
 .theme-indigo {
-    --primary-color: #E8EAF6; --accent-color: #9FA8DA; --bg-color: #1A237E; --card-bg-color: #283593; --text-color: #E8EAF6; --border-color: #3F51B5; --input-bg-color: #303F9F; --button-bg-color: #3F51B5; --button-text-color: #E8EAF6;
+    --primary-color: #E3E5F0; --accent-color: #5B6AB0; --bg-color: #2A3B7A; --card-bg-color: #3C4E8C; --text-color: #E3E5F0; --border-color: #4A5A9A; --input-bg-color: #3A4A8A; --button-bg-color: #6A7BC0; --button-text-color: #E8ECF5;
+    --accent-color-rgb: 91, 106, 176; --primary-color-rgb: 227, 229, 240; --button-bg-color-rgb: 106, 123, 192; --card-bg-color-rgb: 60, 78, 140;
 }
 
 
@@ -61,23 +66,23 @@ body {
 .card {
     background-color: var(--card-bg-color);
     border: 1px solid var(--border-color);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* Slightly less aggressive shadow */
+    transition: transform 0.1s ease-out, box-shadow 0.1s ease-out; /* Reduced transition time */
 }
 .card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3);
+    transform: translateY(-1px); /* More subtle lift */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); /* Slightly more pronounced shadow on hover */
 }
 
-.input-field, .file-input, select {
+.input-field, select.custom-select {
     background-color: var(--input-bg-color);
     border: 1px solid var(--border-color);
     color: var(--text-color);
     transition: all 0.2s ease-in-out;
 }
-.input-field:focus, .file-input:focus, select:focus {
+.input-field:focus, select.custom-select:focus {
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb, 163, 217, 165), 0.5); /* Use RGB for rgba */
+    box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb, 106, 154, 106), 0.5); /* Use RGB for rgba */
     outline: none;
 }
 
@@ -86,7 +91,7 @@ body {
     padding: 0.75rem 1.5rem;
     border-radius: 0.75rem; /* More rounded */
     font-weight: 600;
-    transition: all 0.2s ease-in-out;
+    transition: all 0.1s ease-in-out; /* Reduced transition time */
     display: inline-flex;
     justify-content: center;
     align-items: center;
@@ -101,11 +106,11 @@ body {
 }
 .btn-primary:hover {
     background-color: var(--accent-color);
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transform: translateY(-0.5px) scale(1.01); /* More subtle */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 .btn-primary:active {
-    transform: translateY(1px);
+    transform: translateY(0.5px);
     box-shadow: none;
 }
 
@@ -116,11 +121,11 @@ body {
 }
 .btn-secondary:hover {
     background-color: var(--border-color);
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transform: translateY(-0.5px) scale(1.01); /* More subtle */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 .btn-secondary:active {
-    transform: translateY(1px);
+    transform: translateY(0.5px);
     box-shadow: none;
 }
 
@@ -129,12 +134,12 @@ body {
     color: white;
 }
 .btn-danger:hover {
-    background-color: #D32F2F; /* A darker shade of red */
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    background-color: #C23A3A; /* A darker shade of red */
+    transform: translateY(-0.5px) scale(1.01); /* More subtle */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 .btn-danger:active {
-    transform: translateY(1px);
+    transform: translateY(0.5px);
     box-shadow: none;
 }
 
@@ -147,19 +152,19 @@ body {
     background-color: transparent;
     color: var(--text-color);
     font-weight: 600;
-    transition: background-color 0.2s, color 0.2s, transform 0.1s;
+    transition: background-color 0.1s, color 0.1s, transform 0.05s; /* Reduced transition time */
     display: flex;
     align-items: center;
 }
 .nav-button:hover {
     background-color: var(--input-bg-color);
     color: var(--accent-color);
-    transform: translateX(5px);
+    transform: translateX(2px); /* More subtle slide */
 }
 .nav-button.active {
     background-color: var(--accent-color);
     color: var(--button-text-color);
-    box-shadow: inset 0 0 8px rgba(0,0,0,0.3);
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.2); /* Reduced shadow */
 }
 .nav-button.active:hover {
     background-color: var(--accent-color);
@@ -227,11 +232,11 @@ body {
 }
 .slider::-webkit-slider-thumb:hover {
     background: var(--button-bg-color);
-    transform: scale(1.1);
+    transform: scale(1.05); /* Slightly smaller scale on hover */
 }
 .slider::-webkit-slider-thumb:active {
     cursor: grabbing;
-    transform: scale(0.9);
+    transform: scale(0.95); /* Slightly larger scale on active */
 }
 .slider::-moz-range-thumb {
     width: 20px;
@@ -244,11 +249,11 @@ body {
 }
 .slider::-moz-range-thumb:hover {
     background: var(--button-bg-color);
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 .slider::-moz-range-thumb:active {
     cursor: grabbing;
-    transform: scale(0.9);
+    transform: scale(0.95);
 }
 
 
@@ -288,7 +293,7 @@ body {
 
 .checkbox-container input[type="checkbox"]:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb, 163, 217, 165), 0.5);
+    box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb, 106, 154, 106), 0.5);
 }
 
 
@@ -299,7 +304,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(var(--card-bg-color-rgb, 26, 42, 26), 0.9); /* Semi-transparent dark background */
+    background-color: rgba(var(--card-bg-color-rgb, 28, 43, 28), 0.9); /* Semi-transparent dark background */
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -362,6 +367,54 @@ body {
     color: var(--error-color);
 }
 
+/* Custom File Upload Styling */
+.custom-file-upload {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    background-color: var(--input-bg-color);
+    color: var(--text-color);
+    padding: 0.5rem; /* Reduced padding for compact look */
+    cursor: pointer;
+    overflow: hidden;
+    margin-bottom: 0.5rem; /* Space below if not full width */
+}
+
+.file-name-display {
+    flex-grow: 1;
+    padding: 0.5rem 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.9rem; /* Slightly smaller font */
+}
+
+.file-button {
+    flex-shrink: 0;
+    padding: 0.5rem 1rem; /* Adjust padding for button */
+    border-radius: 0.6rem; /* Match parent rounded corners */
+    margin-left: 0.5rem;
+    font-size: 0.9rem;
+    transition: all 0.1s ease-in-out;
+}
+
+/* Custom Select Styling */
+.custom-select {
+    appearance: none; /* Remove default browser styling */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23E0EAE0'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'%3E%3C/path%3E%3C/svg%3E"); /* Custom SVG caret (greenish-white color) */
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.25rem;
+    padding-right: 2.5rem; /* Make space for the caret */
+}
+/* Adjust caret color based on theme (requires JS or more SVG work, simplified for now) */
+.theme-blue .custom-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23DDEBF0'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'%3E%3C/path%3E%3C/svg%3E"); }
+/* More themes can be added similarly by changing fill color in SVG */
+
+
 /* For better mobile experience */
 @media (max-width: 768px) {
     main {
@@ -375,5 +428,31 @@ body {
     }
     .modal-content {
         padding: 1.5rem;
+    }
+    .custom-file-upload {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0.75rem;
+    }
+    .file-name-display {
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+    .file-button {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 0.5rem;
+    }
+    .app-title {
+        font-size: 2rem; /* Adjust title size for mobile */
+    }
+    header .flex-wrap {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    header .space-x-4 {
+        margin-top: 1rem;
+        width: 100%;
+        justify-content: space-between;
     }
 }
