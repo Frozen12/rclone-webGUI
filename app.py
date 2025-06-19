@@ -10,7 +10,7 @@ from flask import Flask, request, jsonify, render_template, redirect, url_for, s
 from functools import wraps
 
 # --- Flask Application Setup ---
-app = Flask(__name__)
+app = Flask(__UPLOAD_FOLDER__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'super-secret-key-replace-me')
 app.permanent_session_lifetime = timedelta(minutes=360) # Remember user for 360 minutes
 
@@ -404,7 +404,8 @@ def stop_terminal_process():
 
 
 # --- Application Startup ---
-@app.before_first_request
+# Moved setup logic to directly before app.run() or Gunicorn starts the app,
+# as @app.before_first_request is deprecated/removed in newer Flask versions.
 def startup_tasks():
     """Tasks to run once when the application starts."""
     ensure_dirs()
@@ -413,9 +414,7 @@ def startup_tasks():
     print("Application started. Log files cleared and directories ensured.")
 
 if __name__ == '__main__':
-    # For local development, you can set these in your environment or a .env file
-    # Example: export FLASK_SECRET_KEY='your_strong_secret_key'
-    # Example: export LOGIN_USERNAME='myuser'
-    # Example: export LOGIN_PASSWORD='mypassword'
+    # Call startup tasks directly when running locally with 'python app.py'
+    startup_tasks()
     app.run(debug=True, host='0.0.0.0', port=5000)
 
