@@ -6,213 +6,374 @@
     <title>Rclone WebGUI</title>
     <link href="https://cdn.tailwindcss.com" rel="stylesheet">
     <style>
+        /* Custom Styles for a professional look */
         body {
-            background-color: #1a202c; /* Dark background */
-            color: #e2e8f0; /* Light text */
-            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            background-color: #0d1117; /* Dark background similar to GitHub dark theme */
+            color: #c9d1d9; /* Light text color */
+            font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
         }
-        .container {
-            max-width: 960px;
+        .container-main {
+            max-width: 1200px;
+            @apply mx-auto px-4 py-8;
+        }
+        .card {
+            @apply bg-gray-800 p-8 rounded-xl shadow-xl border border-gray-700;
+        }
+        .input-text, .input-select, .input-number, .input-file-custom {
+            @apply shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400;
+        }
+        .input-text[type="file"] { /* Adjust for file input's default styling */
+            @apply text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-500 file:text-white hover:file:bg-blue-600 cursor-pointer;
         }
         .btn-primary {
-            @apply bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150 ease-in-out;
+            @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-200 ease-in-out;
         }
         .btn-secondary {
-            @apply bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150 ease-in-out;
+            @apply bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-200 ease-in-out;
         }
-        .input-field {
-            @apply shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-200;
+        .btn-red {
+            @apply bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 transition duration-200 ease-in-out;
         }
-        .textarea-field {
-            @apply shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-200 h-48;
+        .label-text {
+            @apply block text-gray-300 text-sm font-semibold mb-2;
         }
-        .log-output {
-            @apply bg-gray-800 text-green-400 p-3 rounded-md overflow-auto h-64 font-mono text-sm;
+        .output-box {
+            @apply bg-gray-900 text-gray-200 p-4 rounded-lg overflow-auto font-mono text-sm border border-gray-700;
             white-space: pre-wrap; /* Preserve whitespace and wrap long lines */
         }
-        .terminal-output {
-             @apply bg-gray-900 text-lime-400 p-3 rounded-md overflow-auto h-96 font-mono text-sm;
-             white-space: pre-wrap;
+        .rclone-live-output {
+            @apply text-green-400; /* Distinct color for Rclone output */
+            height: 20rem; /* Visible for ~40 lines */
+        }
+        .terminal-output-box {
+            @apply text-lime-400; /* Distinct color for terminal output */
+            height: 25rem; /* Visible for ~50 lines */
+        }
+        .status-message {
+            @apply p-3 rounded-md text-sm mb-4;
         }
         .status-message.success {
-            @apply bg-green-500 text-white p-2 rounded;
+            @apply bg-green-600 text-white;
         }
         .status-message.error {
-            @apply bg-red-500 text-white p-2 rounded;
+            @apply bg-red-600 text-white;
         }
-        /* Hidden class for toggling sections */
-        .hidden {
-            display: none;
+        /* Modal Styles */
+        .modal {
+            @apply fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50;
         }
+        .modal-content {
+            @apply bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 w-full max-w-md;
+        }
+        .modal-header {
+            @apply flex justify-between items-center pb-4 mb-4 border-b border-gray-700;
+        }
+        .modal-body {
+            @apply max-h-96 overflow-y-auto;
+        }
+        .recent-command-item {
+            @apply bg-gray-700 p-3 rounded-lg mb-2 text-sm font-mono break-all;
+        }
+        .recent-location {
+            @apply bg-gray-700 p-3 rounded-lg mb-4 text-sm font-mono break-all;
+        }
+
+        /* Hide elements by default */
+        .hidden { display: none; }
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="p-6">
-    <div class="container mx-auto bg-gray-800 p-8 rounded-lg shadow-xl">
-        <h1 class="text-3xl font-bold text-center mb-6 text-blue-400">Rclone WebGUI</h1>
+<body>
+    <div class="container-main">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-4xl font-extrabold text-blue-400 tracking-tight">Rclone WebGUI</h1>
+            <button onclick="logout()" class="btn-secondary">Logout</button>
+        </div>
 
         <div class="flex justify-center space-x-4 mb-8">
             <button id="setupBtn" class="btn-primary px-6 py-3">Setup</button>
             <button id="terminalBtn" class="btn-primary px-6 py-3">Web Terminal</button>
+            <button id="recentCommandsBtn" class="btn-primary px-6 py-3">Recent Commands</button>
         </div>
 
-        <div id="setupSection" class="hidden bg-gray-700 p-6 rounded-lg mb-8 shadow-md">
-            <h2 class="text-2xl font-semibold mb-4 text-blue-300">Rclone Setup</h2>
+        <div id="setupSection" class="hidden card mb-8">
+            <h2 class="text-2xl font-bold mb-6 text-blue-300 border-b border-gray-700 pb-4">Rclone Setup</h2>
 
-            <div class="mb-6 border-b border-gray-600 pb-6">
-                <h3 class="text-xl font-medium mb-3 text-white">Upload rclone.conf</h3>
-                <input type="file" id="rcloneConfFile" class="block w-full text-sm text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-2">
-                <button onclick="uploadRcloneConf()" class="btn-secondary">Upload rclone.conf</button>
+            <div class="mb-6 pb-6 border-b border-gray-700">
+                <h3 class="text-xl font-semibold mb-3 text-white">Upload rclone.conf</h3>
+                <input type="file" id="rcloneConfFile" class="input-text input-file-custom mb-3">
+                <button onclick="uploadRcloneConf()" class="btn-secondary w-full">Upload rclone.conf</button>
             </div>
 
             <div class="mb-4">
-                <h3 class="text-xl font-medium mb-3 text-white">Upload Service Account ZIP</h3>
-                <input type="file" id="saZipFile" class="block w-full text-sm text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-2">
-                <button onclick="uploadSaZip()" class="btn-secondary">Upload SA ZIP</button>
+                <h3 class="text-xl font-semibold mb-3 text-white">Upload Service Account ZIP</h3>
+                <input type="file" id="saZipFile" class="input-text input-file-custom mb-3">
+                <button onclick="uploadSaZip()" class="btn-secondary w-full">Upload SA ZIP</button>
             </div>
         </div>
 
-        <div id="terminalSection" class="hidden bg-gray-700 p-6 rounded-lg mb-8 shadow-md">
-            <h2 class="text-2xl font-semibold mb-4 text-blue-300">Web Terminal</h2>
+        <div id="terminalSection" class="hidden card mb-8">
+            <h2 class="text-2xl font-bold mb-6 text-blue-300 border-b border-gray-700 pb-4">Web Terminal</h2>
             <div class="mb-4">
-                <label for="terminalCommandInput" class="block text-white text-sm font-bold mb-2">Command:</label>
-                <input type="text" id="terminalCommandInput" class="input-field mb-2" placeholder="e.g., ls -la /app">
-                <button onclick="executeTerminalCommand()" class="btn-primary">Execute Command</button>
-            </div>
-            <div class="mb-4">
-                <label for="terminalOutput" class="block text-white text-sm font-bold mb-2">Output:</label>
-                <pre id="terminalOutput" class="terminal-output"></pre>
-            </div>
-            <button onclick="clearTerminalOutput()" class="btn-secondary">Clear Output</button>
-        </div>
-
-
-        <div class="bg-gray-700 p-6 rounded-lg shadow-md">
-            <h2 class="text-2xl font-semibold mb-4 text-blue-300">Start Rclone Transfer</h2>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label for="source" class="block text-white text-sm font-bold mb-2">Source:</label>
-                    <input type="text" id="source" class="input-field" placeholder="remote:path/to/source">
-                </div>
-                <div>
-                    <label for="destination" class="block text-white text-sm font-bold mb-2">Destination:</label>
-                    <input type="text" id="destination" class="input-field" placeholder="remote:path/to/destination">
+                <label for="terminalCommandInput" class="label-text">Command:</label>
+                <input type="text" id="terminalCommandInput" class="input-text mb-2" placeholder="e.g., ls -la /app">
+                <div class="flex space-x-4">
+                    <button onclick="executeTerminalCommand()" class="btn-primary flex-grow">Execute Command</button>
+                    <button onclick="clearTerminalOutput()" class="btn-secondary">Clear Output</button>
+                    <button onclick="stopTerminalProcess()" class="btn-red">Stop Process</button>
                 </div>
             </div>
+            <div class="mb-4">
+                <label for="terminalOutput" class="label-text">Interactive Web Terminal Output:</label>
+                <pre id="terminalOutput" class="output-box terminal-output-box"></pre>
+            </div>
+        </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div id="recentCommandsModal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="text-xl font-bold text-blue-300">Recent Activity</h3>
+                    <button onclick="closeRecentCommandsModal()" class="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <h4 class="text-lg font-semibold text-gray-200 mb-2">Last Rclone Locations:</h4>
+                    <div id="lastRcloneLocations" class="recent-location">
+                        <p>Source: <span id="lastSource">N/A</span></p>
+                        <p>Destination: <span id="lastDestination">N/A</span></p>
+                    </div>
+
+                    <h4 class="text-lg font-semibold text-gray-200 mb-2">Terminal Command History:</h4>
+                    <div id="terminalCommandHistory">
+                        <p class="text-gray-400">No commands yet.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="card">
+            <h2 class="text-2xl font-bold mb-6 text-blue-300 border-b border-gray-700 pb-4">Rclone Transfer Operations</h2>
+
+            <div class="mb-6">
+                <label for="majorStepsOutput" class="label-text">🚀 Major Steps / Errors:</label>
+                <pre id="majorStepsOutput" class="output-box h-24 text-red-400"></pre>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label for="mode" class="block text-white text-sm font-bold mb-2">Mode:</label>
-                    <select id="mode" class="input-field">
-                        <option value="copy">Copy</option>
-                        <option value="move">Move</option>
-                        <option value="sync">Sync</option>
-                        <option value="delete">Delete</option>
-                        <option value="lsd">List Directories (lsd)</option>
-                        <option value="ls">List Files (ls)</option>
+                    <label for="mode" class="label-text">Mode:</label>
+                    <select id="mode" class="input-select" onchange="updateModeDescription(); toggleRemoteField();">
+                        <optgroup label="Two Remote Commands (Source & Destination)">
+                            <option value="sync" selected>sync - Make source and destination identical</option>
+                            <option value="copy">copy - Copy files from source to destination</option>
+                            <option value="move">move - Move files from source to destination</option>
+                            <option value="purge">purge - Remove all content in the path</option>
+                            <option value="delete">delete - Remove files in the path</option>
+                            <option value="dedupe">dedupe - Remove duplicate files</option>
+                            <option value="cleanup">cleanup - Clean up the remote</option>
+                            <option value="checksum">checksum - Check files checksums</option>
+                        </optgroup>
+                        <optgroup label="One Remote Commands (Remote Only)">
+                            <option value="lsd">lsd - List directories/containers in the path</option>
+                            <option value="ls">ls - List all files in the path</option>
+                            <option value="tree">tree - List contents of the remote in a tree-like fashion</option>
+                            <option value="serve">serve - Serve a remote over HTTP/WebDAV/FTP/etc.</option>
+                            <option value="mkdir">mkdir - Create new directory</option>
+                            <option value="listremotes">listremotes - List all the remotes in the config file</option>
+                        </optgroup>
                     </select>
-                </div>
-                <div>
-                    <label for="transfers" class="block text-white text-sm font-bold mb-2">Transfers:</label>
-                    <input type="number" id="transfers" class="input-field" value="4" min="1" max="128">
+                    <p id="modeDescription" class="text-gray-400 text-sm mt-2 italic"></p>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label for="checkers" class="block text-white text-sm font-bold mb-2">Checkers:</label>
-                    <input type="number" id="checkers" class="input-field" value="8" min="1" max="128">
+                    <label for="source" id="sourceLabel" class="label-text">Source:</label>
+                    <input type="text" id="source" class="input-text" placeholder="remote:path/to/source">
                 </div>
-                <div>
-                    <label for="buffer_size" class="block text-white text-sm font-bold mb-2">Buffer Size (MB):</label>
-                    <input type="number" id="buffer_size" class="input-field" value="128" min="1" max="1024">
+                <div id="destinationField">
+                    <label for="destination" class="label-text">Destination:</label>
+                    <input type="text" id="destination" class="input-text" placeholder="remote:path/to/destination">
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label for="order" class="block text-white text-sm font-bold mb-2">Order By:</label>
-                    <select id="order" class="input-field">
+                    <label for="transfers" class="label-text">Transfers:</label>
+                    <input type="number" id="transfers" class="input-number" value="4" min="1" max="128">
+                </div>
+                <div>
+                    <label for="checkers" class="label-text">Checkers:</label>
+                    <input type="number" id="checkers" class="input-number" value="8" min="1" max="128">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label for="buffer_size" class="label-text">Buffer Size (MB):</label>
+                    <input type="number" id="buffer_size" class="input-number" value="128" min="1" max="1024">
+                </div>
+                <div>
+                    <label for="order" class="label-text">Order By:</label>
+                    <select id="order" class="input-select">
                         <option value="name">Name</option>
                         <option value="size">Size</option>
                         <option value="modtime">Modification Time</option>
                     </select>
                 </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label for="loglevel" class="block text-white text-sm font-bold mb-2">Log Level:</label>
-                    <select id="loglevel" class="input-field">
+                    <label for="loglevel" class="label-text">Log Level:</label>
+                    <select id="loglevel" class="input-select">
                         <option value="Info">Info</option>
                         <option value="ERROR">Error</option>
                         <option value="DEBUG">Debug</option>
                     </select>
                 </div>
-            </div>
-
-            <div class="mb-6">
-                <label for="additional_flags" class="block text-white text-sm font-bold mb-2">Additional Flags:</label>
-                <input type="text" id="additional_flags" class="input-field" placeholder="e.g., --drive-server-side-across-configs">
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div class="flex items-center">
-                    <input type="checkbox" id="use_drive_trash" class="form-checkbox h-5 w-5 text-blue-600">
-                    <label for="use_drive_trash" class="ml-2 text-white">Use Drive Trash</label>
-                </div>
-                <div class="flex items-center">
-                    <input type="checkbox" id="service_account" class="form-checkbox h-5 w-5 text-blue-600">
-                    <label for="service_account" class="ml-2 text-white">Use Service Account</label>
-                </div>
-                <div class="flex items-center">
-                    <input type="checkbox" id="dry_run" class="form-checkbox h-5 w-5 text-blue-600">
-                    <label for="dry_run" class="ml-2 text-white">Dry Run</label>
+                 <div>
+                    <label for="additional_flags" class="label-text">Additional Flags:</label>
+                    <input type="text" id="additional_flags" class="input-text" placeholder="e.g., --drive-server-side-across-configs">
                 </div>
             </div>
 
-            <button onclick="startRcloneTransfer()" class="btn-primary w-full py-3 mb-4">Start Rclone Transfer</button>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="flex items-center">
+                    <input type="checkbox" id="use_drive_trash" class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 bg-gray-700 border-gray-600">
+                    <label for="use_drive_trash" class="ml-2 text-gray-300 select-none">Use Drive Trash</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" id="service_account" class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 bg-gray-700 border-gray-600">
+                    <label for="service_account" class="ml-2 text-gray-300 select-none">Use Service Account</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" id="dry_run" class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 bg-gray-700 border-gray-600">
+                    <label for="dry_run" class="ml-2 text-gray-300 select-none">Dry Run</label>
+                </div>
+            </div>
+
+            <button onclick="startRcloneTransfer()" class="btn-primary w-full py-3 mb-6 text-lg">Start Rclone Transfer</button>
 
             <div class="mb-4">
-                <label for="output" class="block text-white text-sm font-bold mb-2">Rclone Output:</label>
-                <pre id="output" class="log-output"></pre>
+                <label for="rcloneLiveOutput" class="label-text">💠 Rclone Live Transfer Progress (Last 40 lines):</label>
+                <pre id="rcloneLiveOutput" class="output-box rclone-live-output"></pre>
             </div>
 
-            <button onclick="downloadLogs()" class="btn-secondary w-full py-3">Download Logs</button>
+            <button onclick="downloadLogs()" class="btn-secondary w-full py-3">Download Full Rclone Logs</button>
         </div>
     </div>
 
     <script>
-        const outputElement = document.getElementById('output');
-        const terminalOutputElement = document.getElementById('terminalOutput');
-        const setupBtn = document.getElementById('setupBtn');
+        // DOM Elements
+        const majorStepsOutputElement = document.getElementById('majorStepsOutput'); // For upload/setup messages
+        const rcloneLiveOutputElement = document.getElementById('rcloneLiveOutput'); // For live Rclone transfer logs
+        const terminalOutputElement = document.getElementById('terminalOutput'); // For Web Terminal output
         const setupSection = document.getElementById('setupSection');
-        const terminalBtn = document.getElementById('terminalBtn');
         const terminalSection = document.getElementById('terminalSection');
+        const recentCommandsModal = document.getElementById('recentCommandsModal');
         const terminalCommandInput = document.getElementById('terminalCommandInput');
+        const modeSelect = document.getElementById('mode');
+        const modeDescription = document.getElementById('modeDescription');
+        const sourceInput = document.getElementById('source');
+        const destinationInput = document.getElementById('destination');
+        const sourceLabel = document.getElementById('sourceLabel');
+        const destinationField = document.getElementById('destinationField');
+        const lastSourceSpan = document.getElementById('lastSource');
+        const lastDestinationSpan = document.getElementById('lastDestination');
+        const terminalCommandHistoryDiv = document.getElementById('terminalCommandHistory');
 
+        // Polling interval for terminal output
         let terminalPollingInterval;
+        // Polling interval for Rclone live output (even if no transfer is running)
+        let rcloneLivePollingInterval;
 
-        // Toggle Setup Section Visibility
-        setupBtn.addEventListener('click', () => {
-            setupSection.classList.toggle('hidden');
-            terminalSection.classList.add('hidden'); // Hide terminal if setup is opened
+        // Rclone Mode Descriptions
+        const modeDescriptions = {
+            "sync": "Make source and destination identical, modifying destination only.",
+            "copy": "Copy files from source to destination.",
+            "move": "Move files from source to destination (deleting from source after copy).",
+            "purge": "Remove all content in the path, including the root directory itself. DANGEROUS.",
+            "delete": "Remove files in the path. Does not delete directories.",
+            "dedupe": "Remove duplicate files on the remote. Choose how to identify and which to keep.",
+            "cleanup": "Clean up the remote (e.g., delete empty folders).",
+            "checksum": "Check files checksums.",
+
+            "lsd": "List directories/containers in the path.",
+            "ls": "List all files in the path (including size and modification time).",
+            "tree": "List contents of the remote in a tree-like fashion.",
+            "serve": "Serve a remote over HTTP, WebDAV, FTP, SFTP, DLNA, or others. (Advanced: Requires specific flags).",
+            "mkdir": "Create new directory.",
+            "listremotes": "List all configured remotes in the rclone.conf file."
+        };
+
+        const twoRemoteModes = ["sync", "copy", "move", "purge", "delete", "dedupe", "cleanup", "checksum"];
+
+
+        // --- Initialization on Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            updateModeDescription(); // Set initial description
+            toggleRemoteField();    // Set initial field visibility
+            loadRecentCommands();   // Load commands from local storage
+            startRcloneLivePolling(); // Start polling for Rclone live output
         });
 
-        // Toggle Web Terminal Section Visibility
-        terminalBtn.addEventListener('click', () => {
-            terminalSection.classList.toggle('hidden');
-            setupSection.classList.add('hidden'); // Hide setup if terminal is opened
-            if (!terminalSection.classList.contains('hidden')) {
-                // Start polling for terminal output when visible
+        // --- UI Toggling Functions ---
+        function toggleSection(sectionId) {
+            const sections = {
+                'setupSection': setupSection,
+                'terminalSection': terminalSection
+            };
+
+            for (const key in sections) {
+                if (key === sectionId) {
+                    sections[key].classList.toggle('hidden');
+                } else {
+                    sections[key].classList.add('hidden');
+                }
+            }
+
+            // Manage terminal polling based on visibility
+            if (sectionId === 'terminalSection' && !terminalSection.classList.contains('hidden')) {
                 if (!terminalPollingInterval) {
-                    terminalPollingInterval = setInterval(getTerminalOutput, 1000); // Poll every 1 second
+                    terminalPollingInterval = setInterval(getTerminalOutput, 500); // Poll every 0.5 second
                 }
                 terminalCommandInput.focus(); // Focus input field
             } else {
-                // Stop polling when hidden
                 clearInterval(terminalPollingInterval);
                 terminalPollingInterval = null;
             }
-        });
+        }
 
+        document.getElementById('setupBtn').addEventListener('click', () => toggleSection('setupSection'));
+        document.getElementById('terminalBtn').addEventListener('click', () => toggleSection('terminalSection'));
+
+        // --- Rclone Form & Mode Logic ---
+        function updateModeDescription() {
+            const selectedMode = modeSelect.value;
+            modeDescription.textContent = modeDescriptions[selectedMode] || "No description available for this mode.";
+        }
+
+        function toggleRemoteField() {
+            const selectedMode = modeSelect.value;
+            const isOneRemoteMode = !twoRemoteModes.includes(selectedMode);
+
+            if (isOneRemoteMode) {
+                // Change 'Source' label to 'Remote'
+                sourceLabel.textContent = 'Remote:';
+                // Hide Destination field
+                destinationField.classList.add('hidden');
+                // Copy source content to destination if user wants to keep it for later
+                if (sourceInput.value && !destinationInput.value) {
+                    destinationInput.value = sourceInput.value;
+                }
+            } else {
+                // Revert 'Source' label
+                sourceLabel.textContent = 'Source:';
+                // Show Destination field
+                destinationField.classList.remove('hidden');
+            }
+        }
 
         // --- Rclone Uploads & Transfer ---
         async function uploadFile(fileInputId, endpoint) {
@@ -220,14 +381,18 @@
             const file = fileInput.files[0];
 
             if (!file) {
-                alert('Please select a file.');
+                majorStepsOutputElement.textContent = 'Please select a file to upload.';
+                majorStepsOutputElement.classList.remove('success', 'error');
+                majorStepsOutputElement.classList.add('status-message', 'bg-yellow-600');
                 return;
             }
 
             const formData = new FormData();
             formData.append('file', file);
 
-            outputElement.textContent = `Uploading ${file.name}...`;
+            majorStepsOutputElement.textContent = `Uploading ${file.name}...`;
+            majorStepsOutputElement.classList.remove('success', 'error');
+            majorStepsOutputElement.classList.add('status-message', 'bg-blue-600'); // Indicate processing
 
             try {
                 const response = await fetch(endpoint, {
@@ -236,18 +401,18 @@
                 });
                 const data = await response.json();
                 if (data.status === 'success') {
-                    outputElement.textContent = data.message;
-                    outputElement.classList.remove('text-red-400');
-                    outputElement.classList.add('text-green-400');
+                    majorStepsOutputElement.textContent = data.message;
+                    majorStepsOutputElement.classList.remove('error', 'bg-blue-600', 'bg-yellow-600');
+                    majorStepsOutputElement.classList.add('success');
                 } else {
-                    outputElement.textContent = `Error: ${data.message}`;
-                    outputElement.classList.remove('text-green-400');
-                    outputElement.classList.add('text-red-400');
+                    majorStepsOutputElement.textContent = `Error: ${data.message}`;
+                    majorStepsOutputElement.classList.remove('success', 'bg-blue-600', 'bg-yellow-600');
+                    majorStepsOutputElement.classList.add('error');
                 }
             } catch (error) {
-                outputElement.textContent = `Network error: ${error}`;
-                outputElement.classList.remove('text-green-400');
-                outputElement.classList.add('text-red-400');
+                majorStepsOutputElement.textContent = `Network error: ${error}`;
+                majorStepsOutputElement.classList.remove('success', 'bg-blue-600', 'bg-yellow-600');
+                majorStepsOutputElement.classList.add('error');
             }
             fileInput.value = ''; // Clear file input
         }
@@ -261,14 +426,22 @@
         }
 
         async function startRcloneTransfer() {
-            outputElement.textContent = 'Starting Rclone transfer...';
-            outputElement.classList.remove('text-red-400');
-            outputElement.classList.add('text-green-400');
+            majorStepsOutputElement.textContent = 'Starting Rclone transfer...';
+            majorStepsOutputElement.classList.remove('success', 'error');
+            majorStepsOutputElement.classList.add('status-message', 'bg-blue-600');
+
+            // Clear Rclone live output at the start of a new transfer
+            rcloneLiveOutputElement.textContent = '';
+            rcloneLiveOutputElement.classList.remove('text-red-400');
+            rcloneLiveOutputElement.classList.add('text-green-400');
+
+            const selectedMode = modeSelect.value;
+            const isOneRemoteMode = !twoRemoteModes.includes(selectedMode);
 
             const payload = {
-                source: document.getElementById('source').value,
-                destination: document.getElementById('destination').value,
-                mode: document.getElementById('mode').value,
+                source: sourceInput.value,
+                destination: isOneRemoteMode ? '' : destinationInput.value, // Only send destination if it's a two-remote command
+                mode: selectedMode,
                 transfers: document.getElementById('transfers').value,
                 checkers: document.getElementById('checkers').value,
                 buffer_size: document.getElementById('buffer_size').value,
@@ -280,51 +453,79 @@
                 dry_run: document.getElementById('dry_run').checked
             };
 
-            const response = await fetch('/execute-rclone', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            });
+            // Save last Rclone locations
+            localStorage.setItem('lastRcloneSource', payload.source);
+            localStorage.setItem('lastRcloneDestination', payload.destination);
+            updateRecentCommandsModalContent(); // Update modal content
 
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder('utf-8');
-            let buffer = '';
+            try {
+                const response = await fetch('/execute-rclone', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
 
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                let lastNewlineIndex = buffer.lastIndexOf('\n');
-
-                while (lastNewlineIndex !== -1) {
-                    const line = buffer.substring(0, lastNewlineIndex);
-                    buffer = buffer.substring(lastNewlineIndex + 1);
-                    
-                    try {
-                        const data = JSON.parse(line);
-                        if (data.status === 'progress') {
-                            outputElement.textContent = data.output; // Display buffered output
-                            outputElement.scrollTop = outputElement.scrollHeight; // Scroll to bottom
-                        } else {
-                            outputElement.textContent += `\n${data.message}`;
-                            outputElement.scrollTop = outputElement.scrollHeight;
-                            if (data.status === 'error') {
-                                outputElement.classList.remove('text-green-400');
-                                outputElement.classList.add('text-red-400');
-                            } else if (data.status === 'complete') {
-                                outputElement.classList.remove('text-red-400');
-                                outputElement.classList.add('text-green-400');
-                            }
-                        }
-                    } catch (e) {
-                        // Handle incomplete JSON or non-JSON lines
-                        console.error("Failed to parse JSON line:", line, e);
-                    }
-                    lastNewlineIndex = buffer.lastIndexOf('\n');
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    majorStepsOutputElement.textContent = `Error: ${errorData.message}`;
+                    majorStepsOutputElement.classList.remove('success', 'bg-blue-600');
+                    majorStepsOutputElement.classList.add('error');
+                    rcloneLiveOutputElement.textContent = ''; // Clear live output if error from start
+                    return;
                 }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    let lastNewlineIndex;
+
+                    // Process all complete JSON lines in the buffer
+                    while ((lastNewlineIndex = buffer.lastIndexOf('\n')) !== -1) {
+                        const line = buffer.substring(0, lastNewlineIndex);
+                        buffer = buffer.substring(lastNewlineIndex + 1);
+                        
+                        try {
+                            const data = JSON.parse(line);
+                            if (data.status === 'progress') {
+                                rcloneLiveOutputElement.textContent = data.output; // Display buffered output
+                                rcloneLiveOutputElement.scrollTop = rcloneLiveOutputElement.scrollHeight; // Scroll to bottom
+                            } else {
+                                // Final message (complete/error)
+                                majorStepsOutputElement.textContent = data.message;
+                                if (data.status === 'error') {
+                                    majorStepsOutputElement.classList.remove('success', 'bg-blue-600');
+                                    majorStepsOutputElement.classList.add('error');
+                                    rcloneLiveOutputElement.classList.remove('text-green-400');
+                                    rcloneLiveOutputElement.classList.add('text-red-400');
+                                } else if (data.status === 'complete') {
+                                    majorStepsOutputElement.classList.remove('error', 'bg-blue-600');
+                                    majorStepsOutputElement.classList.add('success');
+                                    rcloneLiveOutputElement.classList.remove('text-red-400');
+                                    rcloneLiveOutputElement.classList.add('text-green-400');
+                                }
+                                if (data.output) { // Update with full final output
+                                    rcloneLiveOutputElement.textContent = data.output;
+                                    rcloneLiveOutputElement.scrollTop = rcloneLiveOutputElement.scrollHeight;
+                                }
+                            }
+                        } catch (e) {
+                            // Handle incomplete JSON or non-JSON lines - often happens with streaming
+                            console.warn("Failed to parse JSON line from Rclone output:", line, e);
+                        }
+                    }
+                }
+            } catch (error) {
+                majorStepsOutputElement.textContent = `Network error during Rclone transfer: ${error}`;
+                majorStepsOutputElement.classList.remove('success', 'bg-blue-600');
+                majorStepsOutputElement.classList.add('error');
             }
         }
 
@@ -337,11 +538,14 @@
             const command = terminalCommandInput.value.trim();
             if (!command) {
                 terminalOutputElement.textContent += "\nNo command entered.\n";
+                terminalOutputElement.scrollTop = terminalOutputElement.scrollHeight;
                 return;
             }
 
-            terminalOutputElement.textContent += `\n$ ${command}\n`; // Display command typed
-            terminalOutputElement.scrollTop = terminalOutputElement.scrollHeight;
+            // Save command to local storage
+            saveCommandToHistory(command);
+
+            terminalCommandInput.value = ''; // Clear input immediately
 
             try {
                 const response = await fetch('/execute_terminal_command', {
@@ -352,13 +556,13 @@
                 const data = await response.json();
                 if (data.status === 'error') {
                     terminalOutputElement.textContent += `ERROR: ${data.output}\n`;
+                    terminalOutputElement.scrollTop = terminalOutputElement.scrollHeight;
                 }
                 // Output will be updated by polling getTerminalOutput()
-                terminalCommandInput.value = ''; // Clear input after sending command
             } catch (error) {
                 terminalOutputElement.textContent += `\nNetwork error: ${error}\n`;
+                terminalOutputElement.scrollTop = terminalOutputElement.scrollHeight;
             }
-            terminalOutputElement.scrollTop = terminalOutputElement.scrollHeight;
         }
 
         async function getTerminalOutput() {
@@ -371,6 +575,18 @@
                 }
             } catch (error) {
                 console.error("Error polling terminal output:", error);
+            }
+        }
+        
+        async function stopTerminalProcess() {
+            try {
+                const response = await fetch('/stop_terminal_process', { method: 'POST' });
+                const data = await response.json();
+                terminalOutputElement.textContent += `\n--- ${data.message} ---\n`;
+                terminalOutputElement.scrollTop = terminalOutputElement.scrollHeight;
+            } catch (error) {
+                terminalOutputElement.textContent += `\nError stopping process: ${error}\n`;
+                terminalOutputElement.scrollTop = terminalOutputElement.scrollHeight;
             }
         }
 
@@ -386,6 +602,22 @@
             }
         });
 
-    </script>
-</body>
-</html>
+        // --- Recent Commands History ---
+        document.getElementById('recentCommandsBtn').addEventListener('click', () => {
+            updateRecentCommandsModalContent();
+            recentCommandsModal.classList.remove('hidden');
+        });
+
+        function closeRecentCommandsModal() {
+            recentCommandsModal.classList.add('hidden');
+        }
+
+        function saveCommandToHistory(command) {
+            let history = JSON.parse(localStorage.getItem('terminalCommandHistory') || '[]');
+            history.push(command);
+            // Optional: Limit history size, e.g., to 50 commands
+            if (history.length > 50) {
+                history = history.slice(history.length - 50);
+            }
+            localStorage.setItem('terminalCommandHistory', JSON.stringify(history));
+        }
