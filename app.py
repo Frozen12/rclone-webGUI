@@ -3,21 +3,24 @@ import time
 import subprocess
 import json
 import secrets
+import threading # For basic non-blocking terminal command execution
 from flask import Flask, request, jsonify, render_template, send_file, redirect, url_for, make_response
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16) # For session management
 
-# --- ADJUSTMENT START ---
-# Define the Rclone configuration base directory directly within the app's structure
-# This path is absolute and fixed, suitable for both Docker (where /app exists)
-# and potentially for direct deployment IF you ensure /app/.config/rclone is writable.
+# --- Rclone Path Definitions (Absolute Paths) ---
+# This is the absolute base directory for all rclone configuration files.
 RCLONE_BASE_CONFIG_DIR = '/app/.config/rclone'
+
+# Specific paths derived from the base directory
+RCLONE_CONF_PATH = os.path.join(RCLONE_BASE_CONFIG_DIR, 'rclone.conf')
+RCLONE_SA_ACCOUNTS_DIR = os.path.join(RCLONE_BASE_CONFIG_DIR, 'sa-accounts') # This is where the JSONs will go
 
 # Environment variables for Rclone (will be set before execution)
 RCLONE_ENV = {
-    'RCLONE_CONFIG': os.path.join(RCLONE_BASE_CONFIG_DIR, 'rclone.conf'),
+    'RCLONE_CONFIG': RCLONE_CONF_PATH, # Rclone will respect this ENV var
     'RCLONE_FAST_LIST': 'true',
     'RCLONE_DRIVE_TPSLIMIT': '3',
     'RCLONE_DRIVE_ACKNOWLEDGE_ABUSE': 'true',
@@ -28,10 +31,52 @@ RCLONE_ENV = {
     'RCLONE_SERVER_SIDE_ACROSS_CONFIGS': 'true'
 }
 
-# Ensure Rclone config directory and SA directory exist
+# Ensure Rclone config directory and SA directory exist when the app starts
 os.makedirs(RCLONE_BASE_CONFIG_DIR, exist_ok=True)
-os.makedirs(os.path.join(RCLONE_BASE_CONFIG_DIR, 'sa-accounts'), exist_ok=True)
-# --- ADJUSTMENT END ---
+os.makedirs(RCLONE_SA_ACCOUNTS_DIR, exist_ok=True)
+
+# Global variables for the simple Web Terminal (NOT production-grade interactive shell)
+# WARNING: Running arbitrary commands via a web interface is a severe security risk.
+# This feature should only be used in highly controlled, trusted environments.
+terminal_output_buffer = []
+terminal_process = None
+terminal_lock = threading.Lock() # To prevent concurrent command execution
+
+def run_command_in_background(command):
+    global terminal_process
+    global terminal_output_buffer
+    with terminal_lock:
+        if terminal_process and terminal_process.poll() is None:
+            terminal_output_buffer.append("ERROR: Another command is already running.\n")
+            return
+
+        terminal_output_buffer = [] # Clear buffer for new command
+        try:
+            # Use shell=True for convenience, but be aware of shell injection risks
+            # For interactive terminal-like behavior, this is simpler
+            terminal_process = subprocess.Popen(
+                command,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+                bufsize=1 # Line-buffered
+            )
+            # Read output in a separate thread to avoid blocking Flask
+            def read_output():
+                for line in iter(terminal_process.stdout.readline, ''):
+                    terminal_output_buffer.append(line)
+                terminal_process.wait() # Wait for process to terminate
+                terminal_output_buffer.append(f"\n--- Command finished with exit code {terminal_process.returncode} ---\n")
+            
+            thread = threading.Thread(target=read_output)
+            thread.daemon = True # Allow main program to exit even if thread is running
+            thread.start()
+
+        except Exception as e:
+            terminal_output_buffer.append(f"ERROR: Failed to start command: {e}\n")
+            terminal_process = None
+
 
 # --- Authentication ---
 @app.route('/login', methods=['GET', 'POST'])
@@ -66,9 +111,13 @@ def upload_rclone_conf():
     if file.filename == '':
         return jsonify({'status': 'error', 'message': 'No selected file'}), 400
     if file:
-        file.save(RCLONE_ENV['RCLONE_CONFIG'])
-        return jsonify({'status': 'success', 'message': 'rclone.conf uploaded successfully'})
-    return jsonify({'status': 'error', 'message': 'Failed to upload rclone.conf'}), 500
+        file.save(RCLONE_CONF_PATH)
+        # Check if file exists after saving
+        if os.path.exists(RCLONE_CONF_PATH):
+            return jsonify({'status': 'success', 'message': f'rclone.conf uploaded successfully to {RCLONE_CONF_PATH}'})
+        else:
+            return jsonify({'status': 'error', 'message': 'Failed to save rclone.conf (file not found after save)'}), 500
+    return jsonify({'status': 'error', 'message': 'Failed to upload rclone.conf (unknown error)'}), 500
 
 @app.route('/upload-sa-zip', methods=['POST'])
 def upload_sa_zip():
@@ -78,21 +127,36 @@ def upload_sa_zip():
     if file.filename == '':
         return jsonify({'status': 'error', 'message': 'No selected file'}), 400
     if file:
-        sa_accounts_dir = os.path.join(RCLONE_BASE_CONFIG_DIR, 'sa-accounts')
-        sa_zip_path = os.path.join(sa_accounts_dir, 'sa-accounts.zip')
+        sa_zip_path = os.path.join(RCLONE_BASE_CONFIG_DIR, 'sa-accounts.zip')
         file.save(sa_zip_path)
+        
+        # Check if zip file exists before proceeding
+        if not os.path.exists(sa_zip_path):
+             return jsonify({'status': 'error', 'message': f'Failed to save SA ZIP to {sa_zip_path} (file not found after save)'}), 500
+
         try:
-            for f in os.listdir(sa_accounts_dir):
+            # Clear existing SA files from the sa-accounts subdirectory
+            for f in os.listdir(RCLONE_SA_ACCOUNTS_DIR):
                 if f.endswith('.json'):
-                    os.remove(os.path.join(sa_accounts_dir, f))
+                    os.remove(os.path.join(RCLONE_SA_ACCOUNTS_DIR, f))
             
-            subprocess.run(['unzip', '-qq', '-o', sa_zip_path, '-d', sa_accounts_dir], check=True)
-            return jsonify({'status': 'success', 'message': 'Service Account ZIP extracted successfully'})
+            # Extract the zip directly into RCLONE_BASE_CONFIG_DIR
+            # This will create the 'sa-accounts' folder (from within the zip) inside RCLONE_BASE_CONFIG_DIR
+            subprocess.run(['unzip', '-qq', '-o', sa_zip_path, '-d', RCLONE_BASE_CONFIG_DIR], check=True)
+            
+            # Delete the zip file after extraction
+            os.remove(sa_zip_path)
+
+            # Verify extraction by checking if the directory is no longer empty
+            if not os.listdir(RCLONE_SA_ACCOUNTS_DIR):
+                return jsonify({'status': 'error', 'message': f'SA ZIP extracted, but {RCLONE_SA_ACCOUNTS_DIR} is empty. Check zip contents.'}), 500
+
+            return jsonify({'status': 'success', 'message': f'Service Account ZIP extracted to {RCLONE_SA_ACCOUNTS_DIR} and original zip deleted successfully.'})
         except subprocess.CalledProcessError as e:
             return jsonify({'status': 'error', 'message': f'Failed to extract SA ZIP: {e}'}), 500
         except Exception as e:
-            return jsonify({'status': 'error', 'message': f'An error occurred: {e}'}), 500
-    return jsonify({'status': 'error', 'message': 'Failed to upload SA ZIP'}), 500
+            return jsonify({'status': 'error', 'message': f'An error occurred during SA extraction: {e}'}), 500
+    return jsonify({'status': 'error', 'message': 'Failed to upload SA ZIP (unknown error)'}), 500
 
 # --- Rclone Command Execution ---
 @app.route('/execute-rclone', methods=['POST'])
@@ -111,6 +175,10 @@ def execute_rclone():
     service_account = data.get('service_account')
     dry_run = data.get('dry_run')
 
+    # Ensure rclone.conf exists before attempting transfer
+    if not os.path.exists(RCLONE_CONF_PATH):
+        return jsonify({'status': 'error', 'message': f'rclone.conf not found at {RCLONE_CONF_PATH}. Please upload it via Setup.'}), 400
+
     transfersC = f"--transfers={transfers}"
     checkersC = f"--checkers={checkers}"
     bufferS = f"--buffer-size={buffer_size}"
@@ -120,18 +188,20 @@ def execute_rclone():
 
     serviceA_flag = ""
     if service_account:
-        sa_accounts_dir = os.path.join(RCLONE_BASE_CONFIG_DIR, 'sa-accounts')
-        sa_files = [f for f in os.listdir(sa_accounts_dir) if f.endswith('.json')]
+        sa_files = [f for f in os.listdir(RCLONE_SA_ACCOUNTS_DIR) if f.endswith('.json')]
         if sa_files:
             MIXURE = str((os.getpid() + int(time.time())) % len(sa_files)) if sa_files else '0'
-            selected_sa = os.path.join(sa_accounts_dir, sa_files[int(MIXURE) % len(sa_files)])
+            selected_sa = os.path.join(RCLONE_SA_ACCOUNTS_DIR, sa_files[int(MIXURE) % len(sa_files)])
+            # Verify selected SA file exists
+            if not os.path.exists(selected_sa):
+                return jsonify({'status': 'error', 'message': f'Selected service account file not found: {selected_sa}'}), 400
             serviceA_flag = f"--drive-service-account-file={selected_sa}"
         else:
-            return jsonify({'status': 'error', 'message': f'No service account files found in {RCLONE_BASE_CONFIG_DIR}/sa-accounts'}), 400
+            return jsonify({'status': 'error', 'message': f'No service account files found in {RCLONE_SA_ACCOUNTS_DIR}. Please upload SA ZIP via Setup.'}), 400
     else:
-        serviceA_flag = "--s3-no-head"
+        serviceA_flag = "" # Ensure no SA flag if not used
 
-    dryR = "--dry-run" if dry_run else "--s3-no-head-object"
+    dryR = "--dry-run" if dry_run else "" # Only add dry-run if true
 
     loglevel_map = {"ERROR ": "0", "Info ": "1", "DEBUG": "2"}
     verbose_level = loglevel_map.get(loglevel.strip(), "1")
@@ -139,7 +209,10 @@ def execute_rclone():
     cmd = ["rclone", mode, source, destination]
     if additional_flags:
         cmd.extend(additional_flags.split())
-    cmd.extend([
+    
+    # Add flags dynamically
+    flags_to_add = [
+        f"--config={RCLONE_CONF_PATH}", # Explicitly specify config path
         f"--log-file={RCLONE_ENV['RCLONE_LOG_FILE']}",
         f"--verbose={verbose_level}",
         "--progress",
@@ -154,9 +227,14 @@ def execute_rclone():
         "--max-transfer=749G",
         "--cutoff-mode=SOFT",
         "--drive-acknowledge-abuse",
-        serviceA_flag,
-        dryR
-    ])
+    ]
+
+    if serviceA_flag: # Only add if a service account is being used
+        flags_to_add.append(serviceA_flag)
+    if dryR: # Only add if dry_run is true
+        flags_to_add.append(dryR)
+
+    cmd.extend(flags_to_add)
 
     try:
         if os.path.exists(RCLONE_ENV['RCLONE_LOG_FILE']):
@@ -175,7 +253,7 @@ def execute_rclone():
                 if line:
                     line = line.strip()
                     lines_buffer.append(line)
-                    if len(lines_buffer) > 30:
+                    if len(lines_buffer) > 30: # Keep buffer small for frontend display
                         lines_buffer.pop(0)
                     
                     yield json.dumps({
@@ -183,7 +261,7 @@ def execute_rclone():
                         "output": "\\n".join(lines_buffer),
                         "latest_line": line
                     }) + "\\n"
-                time.sleep(0.1)
+                time.sleep(0.05) # Small delay to prevent too frequent updates and high CPU
 
             process.wait()
             if process.returncode == 0:
@@ -203,6 +281,28 @@ def download_logs():
     if os.path.exists(log_file_path):
         return send_file(log_file_path, as_attachment=True, download_name='rclone_Transfer.txt', mimetype='text/plain')
     return jsonify({'status': 'error', 'message': 'Log file not found'}), 404
+
+@app.route('/execute_terminal_command', methods=['POST'])
+def execute_terminal_command():
+    command = request.json.get('command')
+    if not command:
+        return jsonify({'status': 'error', 'output': 'No command provided.'})
+
+    run_command_in_background(command)
+    return jsonify({'status': 'success', 'message': 'Command started.'})
+
+@app.route('/get_terminal_output', methods=['GET'])
+def get_terminal_output():
+    global terminal_output_buffer
+    global terminal_process
+    with terminal_lock:
+        output = "".join(terminal_output_buffer)
+        # Clear buffer after sending to avoid re-sending old data on next poll
+        terminal_output_buffer = [] 
+        
+        status = "running" if terminal_process and terminal_process.poll() is None else "idle"
+        return jsonify({'status': status, 'output': output})
+
 
 @app.route('/')
 def index():
