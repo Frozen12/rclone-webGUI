@@ -22,7 +22,7 @@ BASE_CONFIG_DIR = '/app/.config/rclone'
 UPLOAD_FOLDER = os.path.join(BASE_CONFIG_DIR, 'uploads')
 RCLONE_CONFIG_PATH = os.path.join(BASE_CONFIG_DIR, 'rclone.conf')
 # SERVICE_ACCOUNT_DIR now points to the same location as BASE_CONFIG_DIR for SA JSONs
-SERVICE_ACCOUNT_DIR = BASE_CONFIG_DIR 
+SERVICE_ACCOUNT_DIR = BASE_CONFIG_DIR
 LOG_FILE = os.path.join('/tmp', 'rcloneLog.txt') # Use /tmp for ephemeral logs on Render
 TERMINAL_LOG_FILE = os.path.join('/tmp', 'terminalLog.txt') # Use /tmp for ephemeral logs on Render
 
@@ -30,37 +30,7 @@ TERMINAL_LOG_FILE = os.path.join('/tmp', 'terminalLog.txt') # Use /tmp for ephem
 LOGIN_USERNAME = os.environ.get('LOGIN_USERNAME', 'admin')
 LOGIN_PASSWORD = os.environ.get('LOGIN_PASSWORD', 'password') # IMPORTANT: Change in production!
 
-# --- Ensure Directories Exist on Startup ---
-def create_initial_dirs():
-    """Creates necessary directories for the application."""
-    os.makedirs(BASE_CONFIG_DIR, exist_ok=True)
-    # SERVICE_ACCOUNT_DIR is now the same as BASE_CONFIG_DIR, so no separate creation needed
-    # os.makedirs(SERVICE_ACCOUNT_DIR, exist_ok=True) # This line is no longer needed
-
-    # Ensure logs are cleared on startup for a fresh start each deployment/restart
-    clear_log(LOG_FILE)
-    clear_log(TERMINAL_LOG_FILE)
-    print(f"Directories created: {BASE_CONFIG_DIR}")
-    print(f"Logs cleared: {LOG_FILE}, {TERMINAL_LOG_FILE}")
-
-# Call directory creation on app startup
-with app.app_context():
-    create_initial_dirs()
-
-# --- Global Variables for Rclone and Terminal Processes ---
-# Rclone process management
-rclone_process = None
-rclone_output_buffer = []
-rclone_lock = threading.Lock() # Protects rclone_process and rclone_output_buffer
-stop_rclone_flag = threading.Event() # Flag to signal rclone process to stop
-
-# Terminal process management
-terminal_process = None
-terminal_output_buffer = []
-terminal_lock = threading.Lock() # Protects terminal_process and terminal_output_buffer
-stop_terminal_flag = threading.Event() # Flag to signal terminal process to stop
-
-# --- Utility Functions for Logging ---
+# --- Utility Functions for Logging (Moved to top for early availability) ---
 def write_to_log(filename, content):
     """Appends content to a specified log file."""
     try:
@@ -90,6 +60,35 @@ def read_last_n_lines(filename, n):
     except Exception as e:
         print(f"Error reading last {n} lines from {filename}: {e}")
         return []
+
+# --- Ensure Directories Exist on Startup ---
+def create_initial_dirs():
+    """Creates necessary directories for the application."""
+    os.makedirs(BASE_CONFIG_DIR, exist_ok=True)
+    # SERVICE_ACCOUNT_DIR is now the same as BASE_CONFIG_DIR, so no separate creation needed
+
+    # Ensure logs are cleared on startup for a fresh start each deployment/restart
+    clear_log(LOG_FILE)
+    clear_log(TERMINAL_LOG_FILE)
+    print(f"Directories created: {BASE_CONFIG_DIR}")
+    print(f"Logs cleared: {LOG_FILE}, {TERMINAL_LOG_FILE}")
+
+# Call directory creation on app startup
+with app.app_context():
+    create_initial_dirs()
+
+# --- Global Variables for Rclone and Terminal Processes ---
+# Rclone process management
+rclone_process = None
+rclone_output_buffer = []
+rclone_lock = threading.Lock() # Protects rclone_process and rclone_output_buffer
+stop_rclone_flag = threading.Event() # Flag to signal rclone process to stop
+
+# Terminal process management
+terminal_process = None
+terminal_output_buffer = []
+terminal_lock = threading.Lock() # Protects terminal_process and terminal_output_buffer
+stop_terminal_flag = threading.Event() # Flag to signal terminal process to stop
 
 # --- Authentication Decorator ---
 def login_required(f):
@@ -291,8 +290,8 @@ def execute_rclone():
 
     # Generator function to stream output
     def generate_rclone_output():
-        global rclone_process # Corrected: use global for module-level variables
-        global rclone_output_buffer # Corrected: use global for module-level variables
+        global rclone_process
+        global rclone_output_buffer
         full_output = []
         stop_rclone_flag.clear() # Clear the stop flag for a new run
 
