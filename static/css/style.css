@@ -1,576 +1,379 @@
-/* Import Tailwind CSS - though CDN is used in HTML, this would be for a build process */
-/* @tailwind base; */
-/* @tailwind components; */
-/* @tailwind utilities; */
-
-/* --- Custom CSS Variables for Theming --- */
-:root {
-    /* Emerald Theme (Default - Greenish White Monochromatic) */
-    --color-primary-bg: #F0FDF4; /* Very light green background */
-    --color-secondary-bg: #E0F2F7; /* Light cyan-green for sidebar/accents */
-    --color-card-bg: #FFFFFF; /* Pure white for main cards */
-    --color-text-primary: #1F2937; /* Dark gray for main text */
-    --color-text-secondary: #4B5563; /* Medium gray for secondary text */
-    --color-text-light: #6B7280; /* Lighter gray for subtle text */
-    --color-text-heading: #047857; /* Dark emerald for headings/highlights */
-    --color-border-light: #D1FAE5; /* Very light emerald border */
-    --color-border-medium: #6EE7B7; /* Medium emerald border */
-    --color-input-bg: #F9FAFB; /* Light input background */
-    --color-accent: #059669; /* Emerald-600 for primary actions */
-    --color-accent-hover: #047857; /* Darker emerald */
-    --color-danger: #EF4444; /* Red-500 */
-    --color-danger-hover: #DC2626; /* Darker red */
-    --color-info: #3B82F6; /* Blue-500 */
-    --color-success: #10B981; /* Emerald-600 */
-
-    /* Shadows (more pronounced and softer) */
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
-    --shadow-md: 0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
-    --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
-    --shadow-xl: 0 20px 25px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.04);
-}
-
-/* --- Dark Mode Variables --- */
-.dark {
-    --color-primary-bg: #0F172A; /* Dark blue-gray for background */
-    --color-secondary-bg: #1E293B; /* Slightly lighter dark blue-gray for sidebar/accents */
-    --color-card-bg: #1F2937; /* Dark background for main cards */
-    --color-text-primary: #E2E8F0; /* Light gray for main text */
-    --color-text-secondary: #CBD5E1; /* Medium light gray for secondary text */
-    --color-text-light: #94A3B8; /* Gray for subtle text */
-    --color-text-heading: #34D399; /* Light emerald for headings */
-    --color-border-light: #334155; /* Darker gray border */
-    --color-border-medium: #475569; /* Medium dark gray border */
-    --color-input-bg: #1F2937; /* Dark input background */
-    /* Accent colors remain the same for consistency across themes */
-}
-
-
-/* --- Theming Overrides (Dynamic via JS) --- */
-.body-emerald {
-    --color-accent: #059669; /* Emerald-600 */
-    --color-accent-hover: #047857;
-    --color-text-heading: #047857;
-    --color-secondary-bg: #E0F2F7;
-    background-image: linear-gradient(to bottom right, #F0FDF4, #ECFDF5); /* Subtle gradient for light mode */
-}
-.body-blue {
-    --color-accent: #2563EB; /* Blue-600 */
-    --color-accent-hover: #1D4ED8;
-    --color-text-heading: #1D4ED8;
-    --color-secondary-bg: #DBEAFE;
-    background-image: linear-gradient(to bottom right, #EFF6FF, #E0F2FE);
-}
-.body-purple {
-    --color-accent: #7C3AED; /* Purple-600 */
-    --color-accent-hover: #6D28D9;
-    --color-text-heading: #6D28D9;
-    --color-secondary-bg: #EDE9FE;
-    background-image: linear-gradient(to bottom right, #F5F3FF, #EDE9FE);
-}
-.body-red {
-    --color-accent: #DC2626; /* Red-600 */
-    --color-accent-hover: #B91C1C;
-    --color-text-heading: #B91C1C;
-    --color-secondary-bg: #FEE2E2;
-    background-image: linear-gradient(to bottom right, #FFF1F2, #FEE2E2);
-}
-.body-orange {
-    --color-accent: #EA580C; /* Orange-600 */
-    --color-accent-hover: #C2410C;
-    --color-text-heading: #C2410C;
-    --color-secondary-bg: #FFEDD5;
-    background-image: linear-gradient(to bottom right, #FFF7ED, #FFEDD5);
-}
-.body-indigo {
-    --color-accent: #4F46E5; /* Indigo-600 */
-    --color-accent-hover: #4338CA;
-    --color-text-heading: #4338CA;
-    --color-secondary-bg: #E0E7FF;
-    background-image: linear-gradient(to bottom right, #EEF2FF, #E0E7FF);
-}
-
-/* Specific header gradient based on theme */
-.body-emerald header { background-image: linear-gradient(to right, #059669, #047857); }
-.body-blue header { background-image: linear-gradient(to right, #2563EB, #1D4ED8); }
-.body-purple header { background-image: linear-gradient(to right, #7C3AED, #6D28D9); }
-.body-red header { background-image: linear-gradient(to right, #DC2626, #B91C1C); }
-.body-orange header { background-image: linear-gradient(to right, #EA580C, #C2410C); }
-.body-indigo header { background-image: linear-gradient(to right, #4F46E5, #4338CA); }
-
-
-/* --- General Application Styles (using CSS variables) --- */
+/* Base Styles */
 body {
-    color: var(--color-text-primary);
-    background-color: var(--color-primary-bg); /* Fallback */
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
 }
-.dark body {
-    background-image: linear-gradient(to bottom right, var(--color-primary-bg), #1F2937); /* Dark mode gradient */
+
+/* Color Variables - Default Greenish White Monochromatic */
+:root {
+    --primary-color: #E6FFE6; /* Light greenish-white */
+    --accent-color: #A3D9A5; /* Muted green */
+    --bg-color: #0E180E; /* Dark background */
+    --card-bg-color: #1A2A1A; /* Slightly lighter dark for cards */
+    --text-color: #E6FFE6; /* Light text */
+    --border-color: #3A4E3A; /* Darker green border */
+    --input-bg-color: #2C3E2C;
+    --button-bg-color: #5BAA60;
+    --button-text-color: #0E180E;
+    --success-color: #4CAF50;
+    --error-color: #F44336;
+    --warning-color: #FFC107;
+    --info-color: #2196F3;
+}
+
+/* Dark Mode (Default) - Explicitly defined for clarity, though it's the root default */
+.dark-mode {
+    --primary-color: #E6FFE6;
+    --accent-color: #A3D9A5;
+    --bg-color: #0E180E;
+    --card-bg-color: #1A2A1A;
+    --text-color: #E6FFE6;
+    --border-color: #3A4E3A;
+    --input-bg-color: #2C3E2C;
+    --button-bg-color: #5BAA60;
+    --button-text-color: #0E180E;
+}
+
+/* Additional Themes */
+.theme-blue {
+    --primary-color: #E0F7FA; --accent-color: #80DEEA; --bg-color: #01579B; --card-bg-color: #0277BD; --text-color: #E0F7FA; --border-color: #00BCD4; --input-bg-color: #0288D1; --button-bg-color: #00ACC1; --button-text-color: #E0F7FA;
+}
+.theme-purple {
+    --primary-color: #F3E5F5; --accent-color: #CE93D8; --bg-color: #4A148C; --card-bg-color: #6A1B9A; --text-color: #F3E5F5; --border-color: #9C27B0; --input-bg-color: #8E24AA; --button-bg-color: #8E24AA; --button-text-color: #F3E5F5;
+}
+.theme-orange {
+    --primary-color: #FFF3E0; --accent-color: #FFCC80; --bg-color: #E65100; --card-bg-color: #EF6C00; --text-color: #FFF3E0; --border-color: #FB8C00; --input-bg-color: #F57C00; --button-bg-color: #FB8C00; --button-text-color: #FFF3E0;
+}
+.theme-red {
+    --primary-color: #FFEBEE; --accent-color: #EF9A9A; --bg-color: #B71C1C; --card-bg-color: #C62828; --text-color: #FFEBEE; --border-color: #E53935; --input-bg-color: #D32F2F; --button-bg-color: #E53935; --button-text-color: #FFEBEE;
+}
+.theme-teal {
+    --primary-color: #E0F2F7; --accent-color: #80CBC4; --bg-color: #006064; --card-bg-color: #00838F; --text-color: #E0F2F7; --border-color: #00ACC1; --input-bg-color: #0097A7; --button-bg-color: #00ACC1; --button-text-color: #E0F2F7;
+}
+.theme-indigo {
+    --primary-color: #E8EAF6; --accent-color: #9FA8DA; --bg-color: #1A237E; --card-bg-color: #283593; --text-color: #E8EAF6; --border-color: #3F51B5; --input-bg-color: #303F9F; --button-bg-color: #3F51B5; --button-text-color: #E8EAF6;
 }
 
 
-/* Nav Buttons (Desktop Sidebar) */
+/* General Element Styling */
+.card {
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3);
+}
+
+.input-field, .file-input, select {
+    background-color: var(--input-bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    transition: all 0.2s ease-in-out;
+}
+.input-field:focus, .file-input:focus, select:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb, 163, 217, 165), 0.5); /* Use RGB for rgba */
+    outline: none;
+}
+
+/* Button Styling */
+.btn-primary, .btn-secondary, .btn-danger {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem; /* More rounded */
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-primary {
+    background-color: var(--button-bg-color);
+    color: var(--button-text-color);
+}
+.btn-primary:hover {
+    background-color: var(--accent-color);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+.btn-primary:active {
+    transform: translateY(1px);
+    box-shadow: none;
+}
+
+.btn-secondary {
+    background-color: var(--input-bg-color);
+    color: var(--primary-color);
+    border: 1px solid var(--border-color);
+}
+.btn-secondary:hover {
+    background-color: var(--border-color);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+.btn-secondary:active {
+    transform: translateY(1px);
+    box-shadow: none;
+}
+
+.btn-danger {
+    background-color: var(--error-color);
+    color: white;
+}
+.btn-danger:hover {
+    background-color: #D32F2F; /* A darker shade of red */
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+.btn-danger:active {
+    transform: translateY(1px);
+    box-shadow: none;
+}
+
+/* Navigation Buttons */
 .nav-button {
-    @apply flex items-center px-5 py-3 rounded-xl font-semibold transition-all duration-200 shadow-md transform hover:scale-105;
-    background-color: var(--color-secondary-bg);
-    border: 1px solid var(--color-border-light);
-    color: var(--color-text-primary);
-    position: relative;
-    overflow: hidden; /* For ripple effect */
+    width: 100%;
+    text-align: left;
+    padding: 1rem 1.5rem;
+    border-radius: 0.75rem;
+    background-color: transparent;
+    color: var(--text-color);
+    font-weight: 600;
+    transition: background-color 0.2s, color 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
 }
 .nav-button:hover {
-    background-color: var(--color-accent);
-    color: white;
-    box-shadow: var(--shadow-lg);
+    background-color: var(--input-bg-color);
+    color: var(--accent-color);
+    transform: translateX(5px);
 }
-.nav-button.nav-active {
-    background-color: var(--color-accent);
-    color: white;
-    font-weight: 700;
-    box-shadow: var(--shadow-lg);
-    transform: scale(1.05);
-    border-color: var(--color-accent-hover);
+.nav-button.active {
+    background-color: var(--accent-color);
+    color: var(--button-text-color);
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.3);
 }
-.nav-button i {
-    transition: transform 0.2s ease-out; /* Icon transition */
+.nav-button.active:hover {
+    background-color: var(--accent-color);
+    color: var(--button-text-color);
+    transform: none; /* No extra hover effect for active */
 }
-.nav-button:hover i, .nav-button.nav-active i {
-    transform: translateX(2px); /* Slight movement on hover/active */
-}
-
-
-/* Mobile Nav Button */
-.nav-button-mobile {
-    @apply flex items-center px-4 py-3 rounded-lg font-semibold transition-colors duration-200;
-    background-color: var(--color-secondary-bg);
-    color: var(--color-text-primary);
-}
-.nav-button-mobile:hover {
-    background-color: var(--color-accent);
-    color: white;
-}
-.nav-button-mobile.nav-active {
-    background-color: var(--color-accent);
-    color: white;
-    font-weight: 700;
-}
-
-
-/* Section Card */
-.section-card {
-    @apply p-6 md:p-8 rounded-2xl shadow-xl border transition-colors duration-300;
-    background-color: var(--color-card-bg);
-    border-color: var(--color-border-light);
-    transform-origin: top; /* For scale-up transition */
-}
-.dark .section-card {
-    background-color: var(--color-card-bg);
-    border-color: var(--color-border-medium);
-}
-
-
-.section-title {
-    @apply text-3xl lg:text-4xl font-extrabold mb-8 pb-4 border-b-2;
-    color: var(--color-text-heading);
-    border-color: var(--color-border-light);
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
-}
-.dark .section-title {
-    border-color: var(--color-border-medium);
-}
-
-/* Form Elements */
-.input-label {
-    @apply block text-sm font-medium mb-2;
-    color: var(--color-text-secondary);
-}
-
-.input-field {
-    @apply block w-full p-3 border rounded-xl shadow-sm text-gray-800 dark:text-gray-200;
-    background-color: var(--color-input-bg);
-    border-color: var(--color-border-light);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-}
-.input-field:focus {
-    @apply outline-none ring-2 ring-offset-2 ring-offset-current ring-opacity-50;
-    border-color: var(--color-accent);
-    --tw-ring-color: var(--color-accent); /* Dynamic ring color */
-    box-shadow: 0 0 0 4px rgba(var(--color-accent-rgb-val), 0.2); /* Custom glow */
-}
-.dark .input-field {
-    border-color: var(--color-border-medium);
-}
-
-
-.slider-field {
-    @apply w-full h-2 rounded-lg appearance-none cursor-pointer;
-    background: var(--color-border-light);
-    outline: none;
-    transition: background 0.2s;
-}
-.dark .slider-field {
-    background: var(--color-border-medium);
-}
-.slider-field::-webkit-slider-thumb {
-    @apply appearance-none w-5 h-5 rounded-full shadow-md;
-    background: var(--color-accent);
-    cursor: grab;
-    border: 2px solid white; /* For contrast */
-    transition: transform 0.2s ease;
-}
-.slider-field::-webkit-slider-thumb:active {
-    transform: scale(1.1);
-    cursor: grabbing;
-}
-.slider-field::-moz-range-thumb {
-    @apply w-5 h-5 rounded-full shadow-md;
-    background: var(--color-accent);
-    cursor: grab;
-    border: 2px solid white; /* For contrast */
-    transition: transform 0.2s ease;
-}
-.slider-field::-moz-range-thumb:active {
-    transform: scale(1.1);
-    cursor: grabbing;
-}
-
-.checkbox-field {
-    @apply h-5 w-5 rounded border-gray-300 transition-colors duration-200;
-    border-color: var(--color-border-light);
-    background-color: var(--color-input-bg);
-    color: var(--color-accent); /* Use accent for checked state color */
-    flex-shrink: 0; /* Prevent label from pushing it */
-    cursor: pointer;
-}
-.checkbox-field:checked {
-    background-color: var(--color-accent);
-    border-color: var(--color-accent);
-}
-.checkbox-field:focus {
-    @apply ring-2 ring-offset-2 ring-offset-current ring-opacity-50;
-    --tw-ring-color: var(--color-accent);
-}
-.dark .checkbox-field {
-    border-color: var(--color-border-medium);
-}
-
-
-.file-input {
-    @apply block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:transition-colors file:duration-200;
-    color: var(--color-text-secondary);
-    border: 1px solid var(--color-border-light);
-    border-radius: 0.75rem; /* rounded-xl */
-    padding: 0.75rem; /* Increased padding for better touch target */
-    background-color: var(--color-input-bg);
-}
-.file-input::-webkit-file-upload-button {
-    background-color: var(--color-secondary-bg);
-    color: var(--color-accent);
-    cursor: pointer;
-    border: 1px solid var(--color-border-light); /* Give it a subtle border */
-}
-.file-input::-webkit-file-upload-button:hover {
-    background-color: var(--color-border-medium);
-    color: var(--color-accent-hover);
-}
-.file-input::-moz-file-upload-button {
-    background-color: var(--color-secondary-bg);
-    color: var(--color-accent);
-    cursor: pointer;
-    border: 1px solid var(--color-border-light);
-}
-.file-input::-moz-file-upload-button:hover {
-    background-color: var(--color-border-medium);
-    color: var(--color-accent-hover);
-}
-.dark .file-input {
-    border-color: var(--color-border-medium);
-    color: var(--color-text-secondary);
-}
-.dark .file-input::-webkit-file-upload-button, .dark .file-input::-moz-file-upload-button {
-    background-color: var(--color-border-medium);
-    color: var(--color-text-heading);
-    border-color: var(--color-border-medium);
-}
-.dark .file-input::-webkit-file-upload-button:hover, .dark .file-input::-moz-file-upload-button:hover {
-    background-color: var(--color-border-medium); /* Keep same for now, or subtle shade */
-    color: var(--color-text-heading);
-}
-
-
-/* Buttons */
-.button-base {
-    @apply px-6 py-3 rounded-xl font-semibold shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-current focus:ring-opacity-75;
-    position: relative;
-    overflow: hidden;
-}
-
-.button-base::after { /* Ripple effect */
-    content: '';
-    position: absolute;
-    border-radius: 50%;
-    transform: scale(0);
-    opacity: 1;
-    background-color: rgba(255, 255, 255, 0.4);
-    transition: transform 0.5s ease-out, opacity 0.5s ease-out;
-}
-.button-base:active::after {
-    transform: scale(2);
-    opacity: 0;
-}
-
-
-.button-primary {
-    @apply button-base text-white;
-    background-color: var(--color-accent);
-    box-shadow: var(--shadow-md);
-}
-.button-primary:hover {
-    @apply transform -translate-y-0.5;
-    background-color: var(--color-accent-hover);
-    box-shadow: var(--shadow-lg);
-}
-.button-primary:active {
-    @apply transform translate-y-0.5 scale-98; /* Subtle press effect */
-}
-.button-primary:focus {
-    --tw-ring-color: var(--color-accent);
-}
-
-.button-secondary {
-    @apply button-base;
-    background-color: var(--color-secondary-bg);
-    border: 1px solid var(--color-border-light);
-    color: var(--color-text-primary);
-}
-.button-secondary:hover {
-    @apply transform -translate-y-0.5;
-    background-color: var(--color-border-medium);
-    color: var(--color-accent);
-    box-shadow: var(--shadow-md);
-}
-.button-secondary:active {
-    @apply transform translate-y-0.5 scale-98;
-}
-.button-secondary:focus {
-    --tw-ring-color: var(--color-accent);
-}
-.dark .button-secondary {
-    background-color: var(--color-secondary-bg);
-    border-color: var(--color-border-medium);
-    color: var(--color-text-secondary);
-}
-.dark .button-secondary:hover {
-    background-color: var(--color-border-medium);
-    color: var(--color-text-heading);
-}
-
-.button-primary-outline {
-    @apply button-base border-2;
-    color: var(--color-accent);
-    border-color: var(--color-accent);
-    background-color: transparent;
-}
-.button-primary-outline:hover {
-    @apply text-white transform -translate-y-0.5;
-    background-color: var(--color-accent);
-    box-shadow: var(--shadow-md);
-}
-.button-primary-outline:active {
-    @apply transform translate-y-0.5 scale-98;
-}
-.button-primary-outline:focus {
-    --tw-ring-color: var(--color-accent);
-}
-.dark .button-primary-outline {
-    color: var(--color-text-heading);
-    border-color: var(--color-text-heading);
-}
-
-
-.button-danger {
-    @apply button-base text-white;
-    background-color: var(--color-danger);
-    box-shadow: var(--shadow-md);
-}
-.button-danger:hover {
-    @apply transform -translate-y-0.5;
-    background-color: var(--color-danger-hover);
-    box-shadow: var(--shadow-lg);
-}
-.button-danger:active {
-    @apply transform translate-y-0.5 scale-98;
-}
-.button-danger:focus {
-    --tw-ring-color: var(--color-danger);
-}
-
-.button-disabled {
-    @apply opacity-50 cursor-not-allowed shadow-none;
-    transform: none !important;
-    background-color: var(--color-border-medium) !important;
-    color: var(--color-text-light) !important;
-}
-.button-disabled:hover {
-    background-color: var(--color-border-medium) !important;
-}
-.button-disabled::after { /* Disable ripple for disabled buttons */
-    content: none !important;
-}
-
-
-.button-icon {
-    @apply p-2 rounded-full transition-colors duration-200 flex items-center space-x-1 text-sm font-medium;
-    color: var(--color-text-secondary);
-}
-.button-icon:hover {
-    background-color: var(--color-secondary-bg);
-    color: var(--color-accent);
-}
-.dark .button-icon {
-    color: var(--color-text-light);
-}
-.dark .button-icon:hover {
-    background-color: var(--color-border-medium);
-    color: var(--color-text-heading);
-}
-
 
 /* Output Areas */
 .output-area {
-    @apply bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border font-mono whitespace-pre-wrap break-words text-sm overflow-auto transition-colors duration-300; /* Use break-words for better wrapping */
-    border-color: var(--color-border-light);
-    color: var(--color-text-primary);
-    line-height: 1.6; /* Increased line height for readability */
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05); /* Subtle inner shadow */
-}
-.dark .output-area {
-    border-color: var(--color-border-medium);
-    color: var(--color-text-secondary);
-}
-/* Specific output colors for success/error */
-.output-area.success {
-    color: var(--color-success);
-    border-color: var(--color-success);
-}
-.output-area.error {
-    color: var(--color-danger);
-    border-color: var(--color-danger);
+    background-color: var(--input-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    white-space: pre-wrap; /* Preserve whitespace and wrap long lines */
+    word-break: break-all; /* Break long words */
+    overflow-y: auto;
+    font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace; /* Monospace font for code */
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--primary-color);
+    max-height: 500px; /* Limit height for scrollable output */
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
 }
 
+.major-steps-output {
+    background-color: var(--input-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    font-weight: 500;
+    min-height: 50px;
+    overflow-y: auto;
+    max-height: 150px;
+}
+.major-steps-output .success { color: var(--success-color); }
+.major-steps-output .error { color: var(--error-color); }
+.major-steps-output .warning { color: var(--warning-color); }
+.major-steps-output .info { color: var(--info-color); }
 
-/* Loading Spinner */
-.loading-spinner {
-    @apply flex flex-col items-center justify-center p-6 my-6 rounded-xl shadow-inner animate-pulse-slow; /* Added subtle pulse */
-    background-color: var(--color-secondary-bg);
-    border: 1px solid var(--color-border-light);
-    color: var(--color-text-primary);
-}
-.dark .loading-spinner {
-    background-color: var(--color-border-medium);
-    border-color: var(--color-border-medium);
-}
-.spinner {
-    @apply w-10 h-10 rounded-full animate-spin;
-    border-color: var(--color-accent) transparent transparent transparent;
-    border-width: 4px; /* Thicker spinner */
-}
-
-/* Modal Styles */
-.modal-overlay {
-    @apply fixed inset-0 bg-gray-900 bg-opacity-70 flex justify-center items-center z-50;
-    backdrop-filter: blur(8px); /* More pronounced blur effect */
-}
-.modal-content {
-    @apply bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl max-w-3xl w-full mx-4 border transition-colors duration-300;
-    border-color: var(--color-border-light);
-    transform-origin: center;
-}
-.dark .modal-content {
-    border-color: var(--color-border-medium);
-}
-
-/* Custom Scrollbar for Modal history */
-.custom-scrollbar::-webkit-scrollbar {
-    width: 8px;
+/* Slider Styling (Webkit/Firefox) */
+.slider {
+    -webkit-appearance: none;
+    width: 100%;
     height: 8px;
+    background: var(--input-bg-color);
+    outline: none;
+    opacity: 0.9;
+    transition: opacity .2s;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
 }
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: var(--color-input-bg); /* Light track */
-    border-radius: 10px;
+.slider:hover {
+    opacity: 1;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background: var(--color-border-medium); /* Emerald thumb */
-    border-radius: 10px;
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    cursor: grab;
+    transition: background-color 0.2s, transform 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: var(--color-accent);
+.slider::-webkit-slider-thumb:hover {
+    background: var(--button-bg-color);
+    transform: scale(1.1);
 }
-.dark .custom-scrollbar::-webkit-scrollbar-track {
-    background: var(--color-border-medium);
+.slider::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    transform: scale(0.9);
 }
-.dark .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: var(--color-text-secondary);
+.slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    cursor: grab;
+    transition: background-color 0.2s, transform 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
-
-
-/* Vue Transitions */
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s ease;
+.slider::-moz-range-thumb:hover {
+    background: var(--button-bg-color);
+    transform: scale(1.1);
 }
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
-}
-.modal-content.fade-enter-active, .modal-content.fade-leave-active {
-    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Bounce effect */
-}
-.modal-content.fade-enter-from {
-    transform: scale(0.8) translateY(50px);
-    opacity: 0;
-}
-.modal-content.fade-leave-to {
-    transform: scale(0.8) translateY(20px);
-    opacity: 0;
-}
-
-/* Section transition (fade in from bottom) */
-.fade-in-up-enter-active,
-.fade-in-up-leave-active {
-  transition: all 0.4s ease-out;
-}
-.fade-in-up-enter-from,
-.fade-in-up-leave-to {
-  opacity: 0;
-  transform: translateY(20px) scale(0.98);
-}
-
-/* Mobile nav slide from right */
-.slide-fade-right-enter-active, .slide-fade-right-leave-active {
-    transition: all 0.3s ease-out;
-}
-.slide-fade-right-enter-from, .slide-fade-right-leave-to {
-    transform: translateX(100%);
-    opacity: 0;
+.slider::-moz-range-thumb:active {
+    cursor: grabbing;
+    transform: scale(0.9);
 }
 
 
-/* Animation for subtle pulse on loading spinner */
-@keyframes pulse-slow {
-  0%, 100% {
-    box-shadow: var(--shadow-sm);
-  }
-  50% {
-    box-shadow: var(--shadow-md);
-  }
-}
-.animate-pulse-slow {
-  animation: pulse-slow 3s infinite ease-in-out;
-}
-
-/* Keyframes for glowing border on active elements */
-@keyframes glowing-border {
-    0% { box-shadow: 0 0 0 0px rgba(var(--color-accent-rgb-val), 0.4); }
-    50% { box-shadow: 0 0 0 8px rgba(var(--color-accent-rgb-val), 0); }
-    100% { box-shadow: 0 0 0 0px rgba(var(--color-accent-rgb-val), 0.4); }
+/* Checkbox Styling */
+.checkbox-container input[type="checkbox"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--accent-color);
+    border-radius: 0.375rem; /* Rounded corners */
+    background-color: var(--input-bg-color);
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease-in-out;
 }
 
+.checkbox-container input[type="checkbox"]:checked {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.checkbox-container input[type="checkbox"]::after {
+    content: '\2713'; /* Checkmark unicode character */
+    color: var(--button-text-color);
+    font-size: 14px;
+    display: none;
+}
+
+.checkbox-container input[type="checkbox"]:checked::after {
+    display: block;
+}
+
+.checkbox-container input[type="checkbox"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb, 163, 217, 165), 0.5);
+}
+
+
+/* Spinner Overlay */
+.spinner-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(var(--card-bg-color-rgb, 26, 42, 26), 0.9); /* Semi-transparent dark background */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-radius: 0.75rem;
+    z-index: 10;
+    backdrop-filter: blur(3px); /* Optional blur effect */
+}
+
+.spinner {
+    border: 4px solid var(--border-color);
+    border-top: 4px solid var(--accent-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Modals */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: var(--card-bg-color);
+    padding: 2rem;
+    border-radius: 1rem;
+    max-width: 90%;
+    max-height: 90%;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+}
+
+.close-button {
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    font-size: 2rem;
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--text-color);
+    transition: color 0.2s ease-in-out;
+}
+.close-button:hover {
+    color: var(--error-color);
+}
+
+/* For better mobile experience */
+@media (max-width: 768px) {
+    main {
+        flex-direction: column;
+    }
+    aside {
+        width: 100%;
+    }
+    .btn-primary, .btn-danger, .btn-secondary {
+        width: 100%;
+    }
+    .modal-content {
+        padding: 1.5rem;
+    }
+}
