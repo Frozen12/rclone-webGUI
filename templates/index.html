@@ -114,9 +114,9 @@
                                     <option value="version">version: Show version and exit.</option>
                                 </optgroup>
                             </select>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ modeDescription }}</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">[[ modeDescription ]]</p>
                             <p v-if="['delete', 'purge'].includes(rcloneForm.mode)" class="text-sm text-red-500 font-semibold mt-2">
-                                <i class="fas fa-exclamation-triangle mr-1"></i> Warning: {{ rcloneForm.mode }} mode will permanently delete data! Use with caution.
+                                <i class="fas fa-exclamation-triangle mr-1"></i> Warning: [[ rcloneForm.mode ]] mode will permanently delete data! Use with caution.
                             </p>
                         </div>
 
@@ -135,13 +135,13 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                         <div>
                             <label for="transfers" class="input-label flex justify-between items-center">
-                                Transfers: <span class="text-sm text-gray-500 dark:text-gray-400">{{ rcloneForm.transfers }}</span>
+                                Transfers: <span class="text-sm text-gray-500 dark:text-gray-400">[[ rcloneForm.transfers ]]</span>
                             </label>
                             <input type="range" id="transfers" v-model="rcloneForm.transfers" min="1" max="20" step="1" class="slider-field">
                         </div>
                         <div>
                             <label for="checkers" class="input-label flex justify-between items-center">
-                                Checkers: <span class="text-sm text-gray-500 dark:text-gray-400">{{ rcloneForm.checkers }}</span>
+                                Checkers: <span class="text-sm text-gray-500 dark:text-gray-400">[[ rcloneForm.checkers ]]</span>
                             </label>
                             <input type="range" id="checkers" v-model="rcloneForm.checkers" min="1" max="20" step="1" class="slider-field">
                         </div>
@@ -297,9 +297,9 @@
                     <ul class="space-y-2 max-h-48 overflow-y-auto">
                         <li v-for="(transfer, index) in recentRcloneTransfers" :key="index" class="p-3 bg-gray-100 dark:bg-gray-700 rounded-md shadow-sm flex justify-between items-center">
                             <span class="text-sm break-all mr-4">
-                                <strong>Mode:</strong> {{ transfer.mode }}<br>
-                                <strong>Source:</strong> {{ transfer.source }}<br>
-                                <span v-if="transfer.destination"><strong>Destination:</strong> {{ transfer.destination }}</span>
+                                <strong>Mode:</strong> [[ transfer.mode ]]<br>
+                                <strong>Source:</strong> [[ transfer.source ]]<br>
+                                <span v-if="transfer.destination"><strong>Destination:</strong> [[ transfer.destination ]]</span>
                             </span>
                             <button @click="copyRcloneTransfer(transfer)" class="button-icon">
                                 <i class="fas fa-copy"></i>
@@ -313,7 +313,7 @@
                     <div v-if="recentTerminalCommands.length === 0" class="text-gray-500 dark:text-gray-400">No recent terminal commands.</div>
                     <ul class="space-y-2 max-h-48 overflow-y-auto">
                         <li v-for="(command, index) in recentTerminalCommands" :key="index" class="p-3 bg-gray-100 dark:bg-gray-700 rounded-md shadow-sm flex justify-between items-center">
-                            <span class="font-mono text-sm break-all mr-4">{{ command }}</span>
+                            <span class="font-mono text-sm break-all mr-4">[[ command ]]</span>
                             <button @click="copyToClipboard(command)" class="button-icon">
                                 <i class="fas fa-copy"></i>
                             </button>
