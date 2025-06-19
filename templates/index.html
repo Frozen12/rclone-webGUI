@@ -6,140 +6,94 @@
     <title>Rclone WebGUI</title>
     <link href="https://cdn.tailwindcss.com" rel="stylesheet">
     <style>
-        /* Custom Styles for a professional look */
-        body {
-            background-color: #0d1117; /* Dark background similar to GitHub dark theme */
-            color: #c9d1d9; /* Light text color */
-            font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        /* Custom Styles for scrollbar and text selection to fit theme */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
-        .container-main {
-            max-width: 1200px;
-            @apply mx-auto px-4 py-8;
+        ::-webkit-scrollbar-track {
+            background: #1a202c; /* Darker track */
         }
-        .card {
-            @apply bg-gray-800 p-8 rounded-xl shadow-xl border border-gray-700;
+        ::-webkit-scrollbar-thumb {
+            background: #4a5568; /* Grayish thumb */
+            border-radius: 4px;
         }
-        .input-text, .input-select, .input-number, .input-file-custom {
-            @apply shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400;
+        ::-webkit-scrollbar-thumb:hover {
+            background: #606f8b; /* Lighter on hover */
         }
-        .input-text[type="file"] { /* Adjust for file input's default styling */
-            @apply text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-500 file:text-white hover:file:bg-blue-600 cursor-pointer;
+        ::selection {
+            background-color: #63b3ed; /* Light blue selection */
+            color: #1a202c;
         }
-        .btn-primary {
-            @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-200 ease-in-out;
-        }
-        .btn-secondary {
-            @apply bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-200 ease-in-out;
-        }
-        .btn-red {
-            @apply bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 transition duration-200 ease-in-out;
-        }
-        .label-text {
-            @apply block text-gray-300 text-sm font-semibold mb-2;
-        }
-        .output-box {
-            @apply bg-gray-900 text-gray-200 p-4 rounded-lg overflow-auto font-mono text-sm border border-gray-700;
-            white-space: pre-wrap; /* Preserve whitespace and wrap long lines */
-        }
-        .rclone-live-output {
-            @apply text-green-400; /* Distinct color for Rclone output */
-            height: 20rem; /* Visible for ~40 lines */
-        }
-        .terminal-output-box {
-            @apply text-lime-400; /* Distinct color for terminal output */
-            height: 25rem; /* Visible for ~50 lines */
-        }
-        .status-message {
-            @apply p-3 rounded-md text-sm mb-4;
-        }
-        .status-message.success {
-            @apply bg-green-600 text-white;
-        }
-        .status-message.error {
-            @apply bg-red-600 text-white;
-        }
-        /* Modal Styles */
-        .modal {
-            @apply fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50;
-        }
-        .modal-content {
-            @apply bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 w-full max-w-md;
-        }
-        .modal-header {
-            @apply flex justify-between items-center pb-4 mb-4 border-b border-gray-700;
-        }
-        .modal-body {
-            @apply max-h-96 overflow-y-auto;
-        }
-        .recent-command-item {
-            @apply bg-gray-700 p-3 rounded-lg mb-2 text-sm font-mono break-all;
-        }
-        .recent-location {
-            @apply bg-gray-700 p-3 rounded-lg mb-4 text-sm font-mono break-all;
-        }
-
-        /* Hide elements by default */
-        .hidden { display: none; }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
-    <div class="container-main">
-        <div class="flex justify-between items-center mb-8">
-            <h1 class="text-4xl font-extrabold text-blue-400 tracking-tight">Rclone WebGUI</h1>
-            <button onclick="logout()" class="btn-secondary">Logout</button>
-        </div>
+<body class="bg-gray-900 text-gray-200 font-sans leading-normal antialiased">
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        <header class="flex justify-between items-center mb-10 pb-4 border-b border-gray-700">
+            <h1 class="text-5xl font-extrabold text-blue-400 tracking-tight">Rclone WebGUI</h1>
+            <button onclick="logout()" class="px-5 py-2 rounded-lg bg-gray-700 text-gray-200 font-semibold hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-200 ease-in-out">Logout</button>
+        </header>
 
-        <div class="flex justify-center space-x-4 mb-8">
-            <button id="setupBtn" class="btn-primary px-6 py-3">Setup</button>
-            <button id="terminalBtn" class="btn-primary px-6 py-3">Web Terminal</button>
-            <button id="recentCommandsBtn" class="btn-primary px-6 py-3">Recent Commands</button>
-        </div>
+        <nav class="flex justify-center space-x-4 mb-10">
+            <button id="setupBtn" class="px-6 py-3 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out">Setup</button>
+            <button id="terminalBtn" class="px-6 py-3 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out">Web Terminal</button>
+            <button id="recentCommandsBtn" class="px-6 py-3 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out">Recent Commands</button>
+        </nav>
 
-        <div id="setupSection" class="hidden card mb-8">
-            <h2 class="text-2xl font-bold mb-6 text-blue-300 border-b border-gray-700 pb-4">Rclone Setup</h2>
+        <section id="setupSection" class="hidden bg-gray-800 p-8 rounded-xl shadow-xl border border-gray-700 mb-10">
+            <h2 class="text-3xl font-bold mb-6 text-blue-300 border-b border-gray-700 pb-4">Rclone Setup</h2>
 
-            <div class="mb-6 pb-6 border-b border-gray-700">
-                <h3 class="text-xl font-semibold mb-3 text-white">Upload rclone.conf</h3>
-                <input type="file" id="rcloneConfFile" class="input-text input-file-custom mb-3">
-                <button onclick="uploadRcloneConf()" class="btn-secondary w-full">Upload rclone.conf</button>
+            <div class="mb-8 pb-8 border-b border-gray-700">
+                <h3 class="text-2xl font-semibold mb-4 text-white">Upload `rclone.conf`</h3>
+                <input type="file" id="rcloneConfFile" class="block w-full text-sm text-gray-300
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-blue-500 file:text-white
+                    hover:file:bg-blue-600 cursor-pointer mb-4">
+                <button onclick="uploadRcloneConf()" class="w-full px-5 py-2 rounded-lg bg-gray-700 text-gray-200 font-semibold hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-200 ease-in-out">Upload `rclone.conf`</button>
             </div>
 
-            <div class="mb-4">
-                <h3 class="text-xl font-semibold mb-3 text-white">Upload Service Account ZIP</h3>
-                <input type="file" id="saZipFile" class="input-text input-file-custom mb-3">
-                <button onclick="uploadSaZip()" class="btn-secondary w-full">Upload SA ZIP</button>
+            <div>
+                <h3 class="text-2xl font-semibold mb-4 text-white">Upload Service Account ZIP</h3>
+                <input type="file" id="saZipFile" class="block w-full text-sm text-gray-300
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-blue-500 file:text-white
+                    hover:file:bg-blue-600 cursor-pointer mb-4">
+                <button onclick="uploadSaZip()" class="w-full px-5 py-2 rounded-lg bg-gray-700 text-gray-200 font-semibold hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-200 ease-in-out">Upload SA ZIP</button>
             </div>
-        </div>
+        </section>
 
-        <div id="terminalSection" class="hidden card mb-8">
-            <h2 class="text-2xl font-bold mb-6 text-blue-300 border-b border-gray-700 pb-4">Web Terminal</h2>
-            <div class="mb-4">
-                <label for="terminalCommandInput" class="label-text">Command:</label>
-                <input type="text" id="terminalCommandInput" class="input-text mb-2" placeholder="e.g., ls -la /app">
+        <section id="terminalSection" class="hidden bg-gray-800 p-8 rounded-xl shadow-xl border border-gray-700 mb-10">
+            <h2 class="text-3xl font-bold mb-6 text-blue-300 border-b border-gray-700 pb-4">Web Terminal</h2>
+            <div class="mb-6">
+                <label for="terminalCommandInput" class="block text-gray-300 text-sm font-semibold mb-2">Command:</label>
+                <input type="text" id="terminalCommandInput" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400 mb-4" placeholder="e.g., ls -la /app">
                 <div class="flex space-x-4">
-                    <button onclick="executeTerminalCommand()" class="btn-primary flex-grow">Execute Command</button>
-                    <button onclick="clearTerminalOutput()" class="btn-secondary">Clear Output</button>
-                    <button onclick="stopTerminalProcess()" class="btn-red">Stop Process</button>
+                    <button onclick="executeTerminalCommand()" class="flex-grow px-5 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-200 ease-in-out">Execute Command</button>
+                    <button onclick="clearTerminalOutput()" class="px-5 py-2 rounded-lg bg-gray-600 text-white font-semibold hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-200 ease-in-out">Clear Output</button>
+                    <button onclick="stopTerminalProcess()" class="px-5 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 transition duration-200 ease-in-out">Stop Process</button>
                 </div>
             </div>
-            <div class="mb-4">
-                <label for="terminalOutput" class="label-text">Interactive Web Terminal Output:</label>
-                <pre id="terminalOutput" class="output-box terminal-output-box"></pre>
+            <div>
+                <label for="terminalOutput" class="block text-gray-300 text-sm font-semibold mb-2">Interactive Web Terminal Output:</label>
+                <pre id="terminalOutput" class="bg-gray-900 text-lime-400 p-4 rounded-lg overflow-auto font-mono text-sm border border-gray-700 h-96"></pre>
             </div>
-        </div>
+        </section>
 
-        <div id="recentCommandsModal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 class="text-xl font-bold text-blue-300">Recent Activity</h3>
-                    <button onclick="closeRecentCommandsModal()" class="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+        <div id="recentCommandsModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 w-full max-w-md">
+                <div class="flex justify-between items-center pb-4 mb-4 border-b border-gray-700">
+                    <h3 class="text-2xl font-bold text-blue-300">Recent Activity</h3>
+                    <button onclick="closeRecentCommandsModal()" class="text-gray-400 hover:text-white text-3xl font-bold leading-none">&times;</button>
                 </div>
-                <div class="modal-body">
+                <div class="max-h-96 overflow-y-auto">
                     <h4 class="text-lg font-semibold text-gray-200 mb-2">Last Rclone Locations:</h4>
-                    <div id="lastRcloneLocations" class="recent-location">
-                        <p>Source: <span id="lastSource">N/A</span></p>
-                        <p>Destination: <span id="lastDestination">N/A</span></p>
+                    <div id="lastRcloneLocations" class="bg-gray-700 p-3 rounded-lg mb-4 text-sm font-mono break-all text-gray-300">
+                        <p><span class="font-bold text-blue-300">Source:</span> <span id="lastSource">N/A</span></p>
+                        <p><span class="font-bold text-blue-300">Destination:</span> <span id="lastDestination">N/A</span></p>
                     </div>
 
                     <h4 class="text-lg font-semibold text-gray-200 mb-2">Terminal Command History:</h4>
@@ -151,35 +105,35 @@
         </div>
 
 
-        <div class="card">
-            <h2 class="text-2xl font-bold mb-6 text-blue-300 border-b border-gray-700 pb-4">Rclone Transfer Operations</h2>
+        <section class="bg-gray-800 p-8 rounded-xl shadow-xl border border-gray-700">
+            <h2 class="text-3xl font-bold mb-6 text-blue-300 border-b border-gray-700 pb-4">Rclone Transfer Operations</h2>
 
             <div class="mb-6">
-                <label for="majorStepsOutput" class="label-text">🚀 Major Steps / Errors:</label>
-                <pre id="majorStepsOutput" class="output-box h-24 text-red-400"></pre>
+                <label for="majorStepsOutput" class="block text-gray-300 text-sm font-semibold mb-2">🚀 Major Steps / Errors:</label>
+                <pre id="majorStepsOutput" class="bg-gray-900 text-red-400 p-4 rounded-lg overflow-auto font-mono text-sm border border-gray-700 h-24"></pre>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label for="mode" class="label-text">Mode:</label>
-                    <select id="mode" class="input-select" onchange="updateModeDescription(); toggleRemoteField();">
-                        <optgroup label="Two Remote Commands (Source & Destination)">
-                            <option value="sync" selected>sync - Make source and destination identical</option>
-                            <option value="copy">copy - Copy files from source to destination</option>
-                            <option value="move">move - Move files from source to destination</option>
-                            <option value="purge">purge - Remove all content in the path</option>
-                            <option value="delete">delete - Remove files in the path</option>
-                            <option value="dedupe">dedupe - Remove duplicate files</option>
-                            <option value="cleanup">cleanup - Clean up the remote</option>
-                            <option value="checksum">checksum - Check files checksums</option>
+                    <label for="mode" class="block text-gray-300 text-sm font-semibold mb-2">Mode:</label>
+                    <select id="mode" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400" onchange="updateModeDescription(); toggleRemoteField();">
+                        <optgroup label="Two Remote Commands (Source & Destination)" class="text-blue-300 font-semibold">
+                            <option value="sync" selected class="text-gray-100">sync - Make source and destination identical</option>
+                            <option value="copy" class="text-gray-100">copy - Copy files from source to destination</option>
+                            <option value="move" class="text-gray-100">move - Move files from source to destination</option>
+                            <option value="purge" class="text-gray-100">purge - Remove all content in the path</option>
+                            <option value="delete" class="text-gray-100">delete - Remove files in the path</option>
+                            <option value="dedupe" class="text-gray-100">dedupe - Remove duplicate files</option>
+                            <option value="cleanup" class="text-gray-100">cleanup - Clean up the remote</option>
+                            <option value="checksum" class="text-gray-100">checksum - Check files checksums</option>
                         </optgroup>
-                        <optgroup label="One Remote Commands (Remote Only)">
-                            <option value="lsd">lsd - List directories/containers in the path</option>
-                            <option value="ls">ls - List all files in the path</option>
-                            <option value="tree">tree - List contents of the remote in a tree-like fashion</option>
-                            <option value="serve">serve - Serve a remote over HTTP/WebDAV/FTP/etc.</option>
-                            <option value="mkdir">mkdir - Create new directory</option>
-                            <option value="listremotes">listremotes - List all the remotes in the config file</option>
+                        <optgroup label="One Remote Commands (Remote Only)" class="text-blue-300 font-semibold">
+                            <option value="lsd" class="text-gray-100">lsd - List directories/containers in the path</option>
+                            <option value="ls" class="text-gray-100">ls - List all files in the path</option>
+                            <option value="tree" class="text-gray-100">tree - List contents of the remote in a tree-like fashion</option>
+                            <option value="serve" class="text-gray-100">serve - Serve a remote over HTTP/WebDAV/FTP/etc.</option>
+                            <option value="mkdir" class="text-gray-100">mkdir - Create new directory</option>
+                            <option value="listremotes" class="text-gray-100">listremotes - List all the remotes in the config file</option>
                         </optgroup>
                     </select>
                     <p id="modeDescription" class="text-gray-400 text-sm mt-2 italic"></p>
@@ -188,34 +142,34 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label for="source" id="sourceLabel" class="label-text">Source:</label>
-                    <input type="text" id="source" class="input-text" placeholder="remote:path/to/source">
+                    <label for="source" id="sourceLabel" class="block text-gray-300 text-sm font-semibold mb-2">Source:</label>
+                    <input type="text" id="source" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400" placeholder="remote:path/to/source">
                 </div>
                 <div id="destinationField">
-                    <label for="destination" class="label-text">Destination:</label>
-                    <input type="text" id="destination" class="input-text" placeholder="remote:path/to/destination">
+                    <label for="destination" class="block text-gray-300 text-sm font-semibold mb-2">Destination:</label>
+                    <input type="text" id="destination" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400" placeholder="remote:path/to/destination">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label for="transfers" class="label-text">Transfers:</label>
-                    <input type="number" id="transfers" class="input-number" value="4" min="1" max="128">
+                    <label for="transfers" class="block text-gray-300 text-sm font-semibold mb-2">Transfers:</label>
+                    <input type="number" id="transfers" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400" value="4" min="1" max="128">
                 </div>
                 <div>
-                    <label for="checkers" class="label-text">Checkers:</label>
-                    <input type="number" id="checkers" class="input-number" value="8" min="1" max="128">
+                    <label for="checkers" class="block text-gray-300 text-sm font-semibold mb-2">Checkers:</label>
+                    <input type="number" id="checkers" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400" value="8" min="1" max="128">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label for="buffer_size" class="label-text">Buffer Size (MB):</label>
-                    <input type="number" id="buffer_size" class="input-number" value="128" min="1" max="1024">
+                    <label for="buffer_size" class="block text-gray-300 text-sm font-semibold mb-2">Buffer Size (MB):</label>
+                    <input type="number" id="buffer_size" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400" value="128" min="1" max="1024">
                 </div>
                 <div>
-                    <label for="order" class="label-text">Order By:</label>
-                    <select id="order" class="input-select">
+                    <label for="order" class="block text-gray-300 text-sm font-semibold mb-2">Order By:</label>
+                    <select id="order" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400">
                         <option value="name">Name</option>
                         <option value="size">Size</option>
                         <option value="modtime">Modification Time</option>
@@ -223,45 +177,45 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
-                    <label for="loglevel" class="label-text">Log Level:</label>
-                    <select id="loglevel" class="input-select">
+                    <label for="loglevel" class="block text-gray-300 text-sm font-semibold mb-2">Log Level:</label>
+                    <select id="loglevel" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400">
                         <option value="Info">Info</option>
                         <option value="ERROR">Error</option>
                         <option value="DEBUG">Debug</option>
                     </select>
                 </div>
                  <div>
-                    <label for="additional_flags" class="label-text">Additional Flags:</label>
-                    <input type="text" id="additional_flags" class="input-text" placeholder="e.g., --drive-server-side-across-configs">
+                    <label for="additional_flags" class="block text-gray-300 text-sm font-semibold mb-2">Additional Flags:</label>
+                    <input type="text" id="additional_flags" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400" placeholder="e.g., --drive-server-side-across-configs">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div class="flex items-center">
                     <input type="checkbox" id="use_drive_trash" class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 bg-gray-700 border-gray-600">
-                    <label for="use_drive_trash" class="ml-2 text-gray-300 select-none">Use Drive Trash</label>
+                    <label for="use_drive_trash" class="ml-2 text-gray-300 select-none cursor-pointer">Use Drive Trash</label>
                 </div>
                 <div class="flex items-center">
                     <input type="checkbox" id="service_account" class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 bg-gray-700 border-gray-600">
-                    <label for="service_account" class="ml-2 text-gray-300 select-none">Use Service Account</label>
+                    <label for="service_account" class="ml-2 text-gray-300 select-none cursor-pointer">Use Service Account</label>
                 </div>
                 <div class="flex items-center">
                     <input type="checkbox" id="dry_run" class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 bg-gray-700 border-gray-600">
-                    <label for="dry_run" class="ml-2 text-gray-300 select-none">Dry Run</label>
+                    <label for="dry_run" class="ml-2 text-gray-300 select-none cursor-pointer">Dry Run</label>
                 </div>
             </div>
 
-            <button onclick="startRcloneTransfer()" class="btn-primary w-full py-3 mb-6 text-lg">Start Rclone Transfer</button>
+            <button onclick="startRcloneTransfer()" class="w-full px-6 py-3 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out mb-6">Start Rclone Transfer</button>
 
             <div class="mb-4">
-                <label for="rcloneLiveOutput" class="label-text">💠 Rclone Live Transfer Progress (Last 40 lines):</label>
-                <pre id="rcloneLiveOutput" class="output-box rclone-live-output"></pre>
+                <label for="rcloneLiveOutput" class="block text-gray-300 text-sm font-semibold mb-2">💠 Rclone Live Transfer Progress (Last 40 lines):</label>
+                <pre id="rcloneLiveOutput" class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto font-mono text-sm border border-gray-700 h-80"></pre>
             </div>
 
-            <button onclick="downloadLogs()" class="btn-secondary w-full py-3">Download Full Rclone Logs</button>
-        </div>
+            <button onclick="downloadLogs()" class="w-full px-5 py-2 rounded-lg bg-gray-700 text-gray-200 font-semibold hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-200 ease-in-out">Download Full Rclone Logs</button>
+        </section>
     </div>
 
     <script>
@@ -302,7 +256,7 @@
             "lsd": "List directories/containers in the path.",
             "ls": "List all files in the path (including size and modification time).",
             "tree": "List contents of the remote in a tree-like fashion.",
-            "serve": "Serve a remote over HTTP, WebDAV, FTP, SFTP, DLNA, or others. (Advanced: Requires specific flags).",
+            "serve": "serve - Serve a remote over HTTP/WebDAV/FTP/etc. (Advanced: Requires specific flags).",
             "mkdir": "Create new directory.",
             "listremotes": "List all configured remotes in the rclone.conf file."
         };
@@ -382,8 +336,8 @@
 
             if (!file) {
                 majorStepsOutputElement.textContent = 'Please select a file to upload.';
-                majorStepsOutputElement.classList.remove('success', 'error');
-                majorStepsOutputElement.classList.add('status-message', 'bg-yellow-600');
+                majorStepsOutputElement.classList.remove('bg-green-600', 'bg-red-600');
+                majorStepsOutputElement.classList.add('bg-yellow-600');
                 return;
             }
 
@@ -391,8 +345,8 @@
             formData.append('file', file);
 
             majorStepsOutputElement.textContent = `Uploading ${file.name}...`;
-            majorStepsOutputElement.classList.remove('success', 'error');
-            majorStepsOutputElement.classList.add('status-message', 'bg-blue-600'); // Indicate processing
+            majorStepsOutputElement.classList.remove('bg-green-600', 'bg-red-600');
+            majorStepsOutputElement.classList.add('bg-blue-600'); // Indicate processing
 
             try {
                 const response = await fetch(endpoint, {
@@ -402,17 +356,17 @@
                 const data = await response.json();
                 if (data.status === 'success') {
                     majorStepsOutputElement.textContent = data.message;
-                    majorStepsOutputElement.classList.remove('error', 'bg-blue-600', 'bg-yellow-600');
-                    majorStepsOutputElement.classList.add('success');
+                    majorStepsOutputElement.classList.remove('bg-red-600', 'bg-blue-600', 'bg-yellow-600');
+                    majorStepsOutputElement.classList.add('bg-green-600');
                 } else {
                     majorStepsOutputElement.textContent = `Error: ${data.message}`;
-                    majorStepsOutputElement.classList.remove('success', 'bg-blue-600', 'bg-yellow-600');
-                    majorStepsOutputElement.classList.add('error');
+                    majorStepsOutputElement.classList.remove('bg-green-600', 'bg-blue-600', 'bg-yellow-600');
+                    majorStepsOutputElement.classList.add('bg-red-600');
                 }
             } catch (error) {
                 majorStepsOutputElement.textContent = `Network error: ${error}`;
-                majorStepsOutputElement.classList.remove('success', 'bg-blue-600', 'bg-yellow-600');
-                majorStepsOutputElement.classList.add('error');
+                majorStepsOutputElement.classList.remove('bg-green-600', 'bg-blue-600', 'bg-yellow-600');
+                majorStepsOutputElement.classList.add('bg-red-600');
             }
             fileInput.value = ''; // Clear file input
         }
@@ -427,8 +381,8 @@
 
         async function startRcloneTransfer() {
             majorStepsOutputElement.textContent = 'Starting Rclone transfer...';
-            majorStepsOutputElement.classList.remove('success', 'error');
-            majorStepsOutputElement.classList.add('status-message', 'bg-blue-600');
+            majorStepsOutputElement.classList.remove('bg-green-600', 'bg-red-600');
+            majorStepsOutputElement.classList.add('bg-blue-600');
 
             // Clear Rclone live output at the start of a new transfer
             rcloneLiveOutputElement.textContent = '';
@@ -470,8 +424,8 @@
                 if (!response.ok) {
                     const errorData = await response.json();
                     majorStepsOutputElement.textContent = `Error: ${errorData.message}`;
-                    majorStepsOutputElement.classList.remove('success', 'bg-blue-600');
-                    majorStepsOutputElement.classList.add('error');
+                    majorStepsOutputElement.classList.remove('bg-green-600', 'bg-blue-600');
+                    majorStepsOutputElement.classList.add('bg-red-600');
                     rcloneLiveOutputElement.textContent = ''; // Clear live output if error from start
                     return;
                 }
@@ -501,13 +455,13 @@
                                 // Final message (complete/error)
                                 majorStepsOutputElement.textContent = data.message;
                                 if (data.status === 'error') {
-                                    majorStepsOutputElement.classList.remove('success', 'bg-blue-600');
-                                    majorStepsOutputElement.classList.add('error');
+                                    majorStepsOutputElement.classList.remove('bg-green-600', 'bg-blue-600');
+                                    majorStepsOutputElement.classList.add('bg-red-600');
                                     rcloneLiveOutputElement.classList.remove('text-green-400');
                                     rcloneLiveOutputElement.classList.add('text-red-400');
                                 } else if (data.status === 'complete') {
-                                    majorStepsOutputElement.classList.remove('error', 'bg-blue-600');
-                                    majorStepsOutputElement.classList.add('success');
+                                    majorStepsOutputElement.classList.remove('bg-red-600', 'bg-blue-600');
+                                    majorStepsOutputElement.classList.add('bg-green-600');
                                     rcloneLiveOutputElement.classList.remove('text-red-400');
                                     rcloneLiveOutputElement.classList.add('text-green-400');
                                 }
@@ -524,8 +478,8 @@
                 }
             } catch (error) {
                 majorStepsOutputElement.textContent = `Network error during Rclone transfer: ${error}`;
-                majorStepsOutputElement.classList.remove('success', 'bg-blue-600');
-                majorStepsOutputElement.classList.add('error');
+                majorStepsOutputElement.classList.remove('bg-green-600', 'bg-blue-600');
+                majorStepsOutputElement.classList.add('bg-red-600');
             }
         }
 
@@ -621,3 +575,58 @@
             }
             localStorage.setItem('terminalCommandHistory', JSON.stringify(history));
         }
+
+        function loadRecentCommands() {
+            updateRecentCommandsModalContent();
+        }
+
+        function updateRecentCommandsModalContent() {
+            // Update Rclone locations
+            const lastSource = localStorage.getItem('lastRcloneSource') || 'N/A';
+            const lastDestination = localStorage.getItem('lastRcloneDestination') || 'N/A';
+            lastSourceSpan.textContent = lastSource;
+            lastDestinationSpan.textContent = lastDestination;
+
+            // Update Terminal Command History
+            let history = JSON.parse(localStorage.getItem('terminalCommandHistory') || '[]');
+            terminalCommandHistoryDiv.innerHTML = ''; // Clear previous content
+            if (history.length === 0) {
+                terminalCommandHistoryDiv.innerHTML = '<p class="text-gray-400">No commands yet.</p>';
+            } else {
+                history.forEach((cmd, index) => {
+                    const p = document.createElement('p');
+                    p.classList.add('bg-gray-700', 'p-3', 'rounded-lg', 'mb-2', 'text-sm', 'font-mono', 'break-all', 'text-gray-300');
+                    p.textContent = `${index + 1}. ${cmd}`;
+                    terminalCommandHistoryDiv.appendChild(p);
+                });
+            }
+        }
+
+        // --- Logout Function ---
+        function logout() {
+            window.location.href = '/logout';
+        }
+
+        // --- Rclone Live Output Polling (for transfer progress, runs always) ---
+        async function getRcloneLiveOutput() {
+            try {
+                const response = await fetch('/get_rclone_live_output');
+                const data = await response.json();
+                if (data.output) {
+                    rcloneLiveOutputElement.textContent = data.output;
+                    rcloneLiveOutputElement.scrollTop = rcloneLiveOutputElement.scrollHeight;
+                }
+            } catch (error) {
+                console.error("Error polling Rclone live output:", error);
+            }
+        }
+
+        function startRcloneLivePolling() {
+            if (!rcloneLivePollingInterval) {
+                rcloneLivePollingInterval = setInterval(getRcloneLiveOutput, 1000); // Poll every 1 second
+            }
+        }
+
+    </script>
+</body>
+</html>
