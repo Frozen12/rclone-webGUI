@@ -48,10 +48,10 @@ COPY static/ static/
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create necessary directories for rclone config and service accounts
-# Rclone expects config in ~/.config/rclone/ by default
+# Create necessary directories for rclone config (BASE_CONFIG_DIR).
+# Service accounts will now be extracted directly into BASE_CONFIG_DIR by app.py.
 ENV HOME /app
-RUN mkdir -p /app/.config/rclone/accounts
+RUN mkdir -p /app/.config/rclone/
 
 # Expose the port Flask will run on
 EXPOSE 5000
