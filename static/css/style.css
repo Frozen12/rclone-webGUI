@@ -1,0 +1,22 @@
+/* Import Tailwind CSS from CDN */
+@import url("https://cdn.tailwindcss.com");
+
+/* Custom Styles for scrollbar and text selection to fit theme */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #1a202c; /* Darker track */
+}
+::-webkit-scrollbar-thumb {
+    background: #4a5568; /* Grayish thumb */
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #606f8b; /* Lighter on hover */
+}
+::selection {
+    background-color: #63b3ed; /* Light blue selection */
+    color: #1a202c;
+}
