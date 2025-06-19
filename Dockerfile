@@ -1,58 +1,54 @@
-# Use an official Python runtime on Alpine Linux
+# Dockerfile
+
+# Use an official Python runtime based on Alpine as a parent image
 FROM python:3.9-alpine
 
-# Install system dependencies
-# curl and unzip are needed for downloading and extracting rclone, and for SA zips.
-# fuse is needed if you plan to use rclone mount, though not directly used in your web app for transfer.
-# If fuse is not strictly needed for your specific rclone commands, you can remove it to shrink image further.
+# Install rclone and necessary tools
+# Alpine uses 'apk' for package management.
+# 'bash' is needed for the rclone install script.
+# 'curl' for downloading rclone.
+# 'unzip' for extracting the service account zip.
+# 'ca-certificates' for secure communication.
 RUN apk add --no-cache \
+    bash \
     curl \
     unzip \
-    fuse \
-    ca-certificates # Essential for curl to work with HTTPS
+    ca-certificates \
+    openssl \
+    libffi-dev \
+    gcc \
+    musl-dev \
+    python3-dev \
+    # Clean up apk cache to reduce image size
+    && rm -rf /var/cache/apk/*
 
-# Install rclone using the "current" link for the latest stable version
-RUN set -eux; \
-    # Download the latest rclone zip archive
-    curl -O https://downloads.rclone.org/rclone-current-linux-amd64.zip; \
-    \
-    # Create a temporary directory for extraction
-    mkdir -p /tmp/rclone-extracted; \
-    \
-    # Unzip the file into the temporary directory
-    unzip -q rclone-current-linux-amd64.zip -d /tmp/rclone-extracted/; \
-    \
-    # Find the extracted rclone executable (its path inside the zip can vary slightly)
-    # The find command is robust against changes in the extracted directory name (e.g., rclone-vX.Y.Z-linux-amd64)
-    find /tmp/rclone-extracted -type f -name "rclone" -exec mv {} /usr/bin/ \; ; \
-    \
-    # Clean up temporary files and directories
-    rm -rf rclone-current-linux-amd64.zip /tmp/rclone-extracted; \
-    \
-    # Make rclone executable
-    chmod +x /usr/bin/rclone; \
-    \
-    # Verify rclone installation
-    rclone version
+# Install rclone using its official install script
+# This script usually handles putting rclone in /usr/bin
+RUN curl https://rclone.org/install.sh | bash
 
 # Set the working directory in the container
 WORKDIR /app
 
-# Create necessary directories for rclone config and service accounts
-# These directories are critical for the application to function correctly.
-RUN mkdir -p /app/.config/rclone/sa-accounts && \
-    chmod -R 777 /app/.config # Ensure necessary permissions for config and SA files
-
-# Copy requirements.txt and install Python dependencies
-# This is done early to leverage Docker's build cache.
+# Copy the requirements file into the working directory
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of your application code into the container
+# Install any needed packages specified in requirements.txt
+# --break-system-packages is often needed on Alpine to install into system Python
+# which is usually where Python packages are installed without venv.
+RUN pip install --no-cache-dir -r requirements.txt --break-system-packages
+
+# Create the specific rclone configuration directories required by the app.
+# These directories must exist and be writable by the application user.
+# Alpine's default user is root, so this is fine, but in production,
+# consider running as a less privileged user.
+RUN mkdir -p /app/.config/rclone/sa-accounts && \
+    chmod -R 777 /app/.config/rclone # Give broad permissions for simplicity in this example
+
+# Copy the application code into the container
 COPY . .
 
-# Expose the port that Gunicorn will bind to
+# Expose the port the app will run on
 EXPOSE 5000
 
-# Set the entrypoint to run the Flask application using Gunicorn
+# Command to run the application (using Gunicorn for production-like deployment)
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
