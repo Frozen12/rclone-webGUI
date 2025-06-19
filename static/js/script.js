@@ -10,9 +10,9 @@ const navButtons = document.querySelectorAll('.nav-button');
 const modeSelect = document.getElementById('mode');
 const modeDescription = document.getElementById('mode-description');
 // const modeDescriptionInline = document.getElementById('mode-description-inline'); // Removed as per request
-const sourceField = document.getElementById('source-field'); // Get the div containing source input
+const sourceField = document.getElementById('source'); // This is the input itself now
 const sourceInput = document.getElementById('source');
-const destinationField = document.getElementById('destination-field');
+const destinationField = document.getElementById('destination-field'); // This is the div wrapping destination input
 const destinationInput = document.getElementById('destination');
 const transfersInput = document.getElementById('transfers');
 const transfersValueSpan = document.getElementById('transfers-value');
@@ -92,8 +92,8 @@ const RcloneModeDescriptions = {
     "version": "Show version and exit."
 };
 
-const modesSrcDest = ["sync", "copy", "move", "copyurl", "check", "cryptcheck"];
-const modesDestOnly = ["lsd", "ls", "tree", "mkdir", "size", "serve", "dedupe", "cleanup", "delete", "deletefile", "purge", "checksum"];
+const modesTwoRemotes = ["sync", "copy", "move", "copyurl", "check", "cryptcheck"];
+const modesOneRemote = ["lsd", "ls", "tree", "mkdir", "size", "serve", "dedupe", "cleanup", "delete", "deletefile", "purge", "checksum"];
 const modesNoArgs = ["listremotes", "version"];
 
 const potentiallyDestructiveModes = ["delete", "purge"];
@@ -188,18 +188,18 @@ function toggleRemoteField() {
     const selectedMode = modeSelect.value;
 
     // Show/hide source and destination fields based on mode type
-    if (modesSrcDest.includes(selectedMode)) {
-        sourceField.classList.remove('hidden'); // Show source field (its parent div)
+    if (modesTwoRemotes.includes(selectedMode)) {
+        sourceInput.closest('div').classList.remove('hidden'); // Show source field (its parent div)
         destinationField.classList.remove('hidden'); // Show destination field
         sourceInput.setAttribute('required', 'true');
         destinationInput.setAttribute('required', 'true');
-    } else if (modesDestOnly.includes(selectedMode)) {
-        sourceField.classList.add('hidden'); // Hide source field
-        destinationField.classList.remove('hidden'); // Show destination field
-        sourceInput.removeAttribute('required');
-        destinationInput.setAttribute('required', 'true');
+    } else if (modesOneRemote.includes(selectedMode)) {
+        sourceInput.closest('div').classList.remove('hidden'); // Keep source field for "path"
+        destinationField.classList.add('hidden'); // Hide destination field
+        sourceInput.setAttribute('required', 'true'); // Source is required as the "path"
+        destinationInput.removeAttribute('required');
     } else if (modesNoArgs.includes(selectedMode)) {
-        sourceField.classList.add('hidden'); // Hide source field
+        sourceInput.closest('div').classList.add('hidden'); // Hide source field
         destinationField.classList.add('hidden'); // Hide destination field
         sourceInput.removeAttribute('required');
         destinationInput.removeAttribute('required');
@@ -216,7 +216,7 @@ async function uploadFile(fileInput, fileNameDisplay, endpoint, outputElement, s
     }
 
     const formData = new FormData();
-    formData.append(fileInput.name, file); // Use fileInput.name here, not fileInput.id
+    formData.append(fileInput.name, file); // Use fileInput.name here, which is 'rclone_conf' or 'sa_zip' as defined in HTML
 
     logMessage(outputElement, `Uploading ${file.name}...`, 'info');
 
@@ -261,16 +261,18 @@ async function startRcloneTransfer() {
     const destination = destinationInput.value.trim();
 
     // Re-validate based on current UI state
-    if (modesSrcDest.includes(mode)) {
+    if (modesTwoRemotes.includes(mode)) {
         if (!source || !destination) {
             logMessage(rcloneMajorStepsOutput, "Source and Destination are required for this Rclone mode.", 'error');
             return;
         }
-    } else if (modesDestOnly.includes(mode)) {
-         if (!destination) { // Corrected: Check for destination, not source
-            logMessage(rcloneMajorStepsOutput, "Destination is required for this Rclone mode.", 'error');
+    } else if (modesOneRemote.includes(mode)) {
+         if (!source) { // Corrected: Check for source as the "path"
+            logMessage(rcloneMajorStepsOutput, "Source (path/remote) is required for this Rclone mode.", 'error');
             return;
         }
+    } else if (modesNoArgs.includes(mode)) {
+        // No arguments needed, proceed
     }
 
 
@@ -662,7 +664,9 @@ function loadRecentCommands() {
 
 
 function clearAllRecentCommands() {
-    if (confirm("Are you sure you want to clear all recent commands and transfers history?")) {
+    // Replaced confirm with a custom modal if needed, but for simplicity, keeping this as is for now.
+    // In a full production app, this would be a custom modal/dialog.
+    if (window.confirm("Are you sure you want to clear all recent commands and transfers history? This cannot be undone.")) {
         localStorage.removeItem('terminalCommands');
         localStorage.removeItem('rcloneTransfers');
         loadRecentCommands(); // Reload to show empty state
