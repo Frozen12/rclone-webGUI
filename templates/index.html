@@ -49,7 +49,7 @@
                         </button>
                         <hr class="border-gray-200 dark:border-gray-700 my-1">
                         <button @click="toggleDarkMode" class="flex items-center w-full px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                            <i :class="[darkMode ? 'fas fa-sun' : 'fas fa-moon']" class="mr-2"></i> {{ darkMode ? 'Light Mode' : 'Dark Mode' }}
+                            <i :class="[darkMode ? 'fas fa-sun' : 'fas fa-moon']" class="mr-2"></i> {% if darkMode %}Light Mode{% else %}Dark Mode{% endif %}
                         </button>
                     </div>
                 </div>
