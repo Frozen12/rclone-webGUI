@@ -72,7 +72,7 @@
                     <h3 class="text-xl font-semibold mb-3 text-accent-color">Upload rclone.conf</h3>
                     <p class="text-sm text-text-color mb-3">Upload your Rclone configuration file. This will overwrite any existing <code>rclone.conf</code>.</p>
                     <label class="custom-file-upload">
-                        <input type="file" id="rclone_conf_file_input" accept=".conf" class="hidden">
+                        <input type="file" id="rclone_conf_file_input" name="rclone_conf" accept=".conf" class="hidden">
                         <span id="rclone-conf-file-name" class="file-name-display">No file chosen</span>
                         <span class="file-button btn-secondary"><i class="fas fa-folder-open mr-2"></i> Browse</span>
                     </label>
@@ -83,7 +83,7 @@
                     <h3 class="text-xl font-semibold mb-3 text-accent-color">Upload Service Account (SA) ZIP</h3>
                     <p class="text-sm text-text-color mb-3">Upload a ZIP file containing your service account JSON files. This will clear existing JSONs and extract new ones directly into <code>/app/.config/rclone/</code>.</p>
                     <label class="custom-file-upload">
-                        <input type="file" id="sa_zip_file_input" accept=".zip" class="hidden">
+                        <input type="file" id="sa_zip_file_input" name="sa_zip" accept=".zip" class="hidden">
                         <span id="sa-zip-file-name" class="file-name-display">No file chosen</span>
                         <span class="file-button btn-secondary"><i class="fas fa-folder-open mr-2"></i> Browse</span>
                     </label>
