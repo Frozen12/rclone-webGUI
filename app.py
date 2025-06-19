@@ -276,7 +276,7 @@ def execute_rclone():
     rclone_env['RCLONE_DRIVE_TPSLIMIT'] = '3'
     rclone_env['RCLONE_DRIVE_ACKNOWLEDGE_ABUSE'] = 'true'
     rclone_env['RCLONE_LOG_FILE'] = LOG_FILE # This is also redundant with --log-file but harmless
-    rclone_env['RCLONE_VERBOSE'] = '2' # This is generally overridden by --log-level
+    # Removed RCLONE_VERBOSE as it conflicts with --log-level
     rclone_env['RCLONE_DRIVE_PACER_MIN_SLEEP'] = '50ms'
     rclone_env['RCLONE_DRIVE_PACER_BURST'] = '2'
     rclone_env['RCLONE_SERVER_SIDE_ACROSS_CONFIGS'] = 'true'
