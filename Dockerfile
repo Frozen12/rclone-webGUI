@@ -1,25 +1,16 @@
-# Use a slim Python base image based on Alpine for smaller size
+# Use a Python 3.9 Alpine base image for a smaller footprint
 FROM python:3.9-alpine
 
-# Set environment variables for non-interactive Rclone installation
-ENV DEBIAN_FRONTEND=noninteractive
+# Set environment variables for Rclone installation
+ENV DEBIAN_FRONTEND noninteractive
 
-# Install core dependencies for Rclone and application:
-# unzip: for rclone and service account zips
-# curl: for downloading rclone
-# fuse: common dependency for rclone, even if not directly mounting, it's safer
-# ca-certificates: for HTTPS downloads
-# git: useful for general web app development and if Python packages require it, or for terminal use
-# build-base: Alpine equivalent of build-essential, needed for compiling Python packages with C extensions
-RUN apk update && \
-    apk add --no-cache \
-    unzip \
+# Install necessary system dependencies for Alpine:
+# curl for downloading rclone, unzip for extracting
+RUN apk add --no-cache \
     curl \
-    fuse \
-    ca-certificates \
-    git \
-    build-base && \
-    rm -rf /var/cache/apk/*
+    unzip \
+    # Clean up apk caches to reduce image size
+    && rm -rf /var/cache/apk/*
 
 # Install rclone using the "current" link for the latest stable version
 RUN set -eux; \
@@ -45,29 +36,29 @@ RUN set -eux; \
     # Verify rclone installation
     rclone version
 
-# Set the working directory in the container
+# Set the working directory inside the container
 WORKDIR /app
 
 # Copy the application files into the container
+COPY requirements.txt .
 COPY app.py .
 COPY templates/ templates/
 COPY static/ static/
 
 # Install Python dependencies
-# Ensure requirements.txt includes gunicorn for production
-COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Ensure necessary directories for rclone configs and logs exist
-# These will be created by app.py on startup, but pre-creating them
-# can help with permissions or initial setup if needed.
-RUN mkdir -p /app/.config/rclone/sa-accounts
-RUN mkdir -p /content # For rcloneLog.txt as specified in the colab script, even if it's external
+# Create necessary directories for rclone config and service accounts
+# Rclone expects config in ~/.config/rclone/ by default
+ENV HOME /app
+RUN mkdir -p /app/.config/rclone/accounts
 
-# Expose the port Flask runs on
+# Expose the port Flask will run on
 EXPOSE 5000
 
-# Command to run the application using Gunicorn (recommended for production)
-# Render automatically injects the PORT env var, so you don't need to specify it explicitly in CMD,
-# but it's good practice for clarity.
-CMD ["python", "app.py"]
+# Command to run the application
+# Using Gunicorn for production deployment with Flask
+# --bind 0.0.0.0:${PORT} makes it listen on all interfaces and the port defined by Render
+# --workers determines how many concurrent requests can be handled (adjust based on resources)
+# --timeout increases the request timeout for potentially long Rclone operations
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--timeout", "300", "app:app"]
