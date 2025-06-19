@@ -1,7 +1,7 @@
 # Use a Python 3.9 Alpine base image for a smaller footprint
 FROM python:3.9-alpine
 
-# Set environment variables for Rclone installation
+# Set environment variables to prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND noninteractive
 
 # Install necessary system dependencies for Alpine:
@@ -9,7 +9,6 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apk add --no-cache \
     curl \
     unzip \
-    # Clean up apk caches to reduce image size
     && rm -rf /var/cache/apk/*
 
 # Install rclone using the "current" link for the latest stable version
@@ -50,10 +49,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Create necessary directories for rclone config (BASE_CONFIG_DIR).
 # Service accounts will now be extracted directly into BASE_CONFIG_DIR by app.py.
-ENV HOME /app
 RUN mkdir -p /app/.config/rclone/
 
 # Expose the port Flask will run on
+# The PORT environment variable will be set by Render
 EXPOSE 5000
 
 # Command to run the application
@@ -61,4 +60,4 @@ EXPOSE 5000
 # --bind 0.0.0.0:${PORT} makes it listen on all interfaces and the port defined by Render
 # --workers determines how many concurrent requests can be handled (adjust based on resources)
 # --timeout increases the request timeout for potentially long Rclone operations
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--timeout", "300", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "3600", "app:app"]
