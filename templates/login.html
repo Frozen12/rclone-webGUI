@@ -3,294 +3,244 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rclone WebGUI</title>
+    <title>Login - Rclone WebGUI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden; /* Hide overflow for background shapes */
+            position: relative;
+        }
+        :root {
+            /* Default Greenish White Monochromatic */
+            --primary-color: #E0EAE0; /* Soft greenish-white */
+            --accent-color: #6A9A6A; /* Muted deep green */
+            --bg-color: #0F1A0F; /* Dark background */
+            --card-bg-color: #1C2B1C; /* Slightly lighter dark for cards */
+            --text-color: #E0EAE0; /* Light text */
+            --border-color: #384A38; /* Darker green border */
+            --input-bg-color: #2A3B2A;
+            --button-bg-color: #558A55;
+            --button-text-color: #F0F5F0; /* Slightly off-white for button text */
+            --success-color: #4CAF50;
+            --error-color: #F44336;
+            --warning-color: #FFC107;
+            --bg-gradient-start: #1A2A1A;
+            --bg-gradient-end: #0B140B;
+        }
+
+        /* --- Theme definitions (muted and high contrast) --- */
+        .dark-mode { /* Default */
+            --primary-color: #E0EAE0; --accent-color: #6A9A6A; --bg-color: #0F1A0F; --card-bg-color: #1C2B1C; --text-color: #E0EAE0; --border-color: #384A38; --input-bg-color: #2A3B2A; --button-bg-color: #558A55; --button-text-color: #F0F5F0;
+            --bg-gradient-start: #1A2A1A; --bg-gradient-end: #0B140B;
+        }
+        .theme-blue {
+            --primary-color: #DDEBF0; --accent-color: #4FB0CC; --bg-color: #0B4F6C; --card-bg-color: #176587; --text-color: #DDEBF0; --border-color: #3A7B9A; --input-bg-color: #2B5F7F; --button-bg-color: #408BB0; --button-text-color: #E0F5F8;
+            --bg-gradient-start: #176587; --bg-gradient-end: #0B4F6C;
+        }
+        .theme-purple {
+            --primary-color: #E8E0EC; --accent-color: #8C5BB0; --bg-color: #3C1E5B; --card-bg-color: #4B2A6B; --text-color: #E8E0EC; --border-color: #6A3A8A; --input-bg-color: #5A3A7A; --button-bg-color: #7B4BA0; --button-text-color: #F0E5F5;
+            --bg-gradient-start: #4B2A6B; --bg-gradient-end: #3C1E5B;
+        }
+        .theme-orange {
+            --primary-color: #F5E9DD; --accent-color: #D67F2C; --bg-color: #8C4B1E; --card-bg-color: #A05F2F; --text-color: #F5E9DD; --border-color: #B07B4A; --input-bg-color: #A06B3A; --button-bg-color: #C08B5B; --button-text-color: #FAECD9;
+            --bg-gradient-start: #A05F2F; --bg-gradient-end: #8C4B1E;
+        }
+        .theme-red {
+            --primary-color: #F0E3E3; --accent-color: #B04F4F; --bg-color: #7A2F2F; --card-bg-color: #8A3A3A; --text-color: #F0E3E3; --border-color: #A04A4A; --input-bg-color: #903A3A; --button-bg-color: #B05B5B; --button-text-color: #F5EDED;
+            --bg-gradient-start: #8A3A3A; --bg-gradient-end: #7A2F2F;
+        }
+        .theme-teal {
+            --primary-color: #E0EFEF; --accent-color: #4FB0B0; --bg-color: #0F5A5A; --card-bg-color: #1C6B6B; --text-color: #E0EFEF; --border-color: #388A8A; --input-bg-color: #2A7B7B; --button-bg-color: #559A9A; --button-text-color: #E5F5F5;
+            --bg-gradient-start: #1C6B6B; --bg-gradient-end: #0F5A5A;
+        }
+        .theme-indigo {
+            --primary-color: #E3E5F0; --accent-color: #5B6AB0; --bg-color: #2A3B7A; --card-bg-color: #3C4E8C; --text-color: #E3E5F0; --border-color: #4A5A9A; --input-bg-color: #3A4A8A; --button-bg-color: #6A7BC0; --button-text-color: #E8ECF5;
+            --bg-gradient-start: #3C4E8C; --bg-gradient-end: #2A3B7A;
+        }
+
+        .background-shapes {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+        }
+
+        .shape-1 {
+            position: absolute;
+            top: -10%;
+            left: -10%;
+            width: 40%;
+            height: 40%;
+            background: rgba(var(--accent-color-rgb, 106, 154, 106), 0.1);
+            border-radius: 50%;
+            filter: blur(50px);
+            animation: float1 15s infinite ease-in-out alternate;
+        }
+        .shape-2 {
+            position: absolute;
+            bottom: -15%;
+            right: -15%;
+            width: 50%;
+            height: 50%;
+            background: rgba(var(--primary-color-rgb, 224, 234, 224), 0.08);
+            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+            filter: blur(60px);
+            animation: float2 20s infinite ease-in-out alternate;
+        }
+        .shape-3 {
+            position: absolute;
+            top: 20%;
+            right: 5%;
+            width: 25%;
+            height: 25%;
+            background: rgba(var(--button-bg-color-rgb, 85, 138, 85), 0.15);
+            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            filter: blur(40px);
+            animation: float3 18s infinite ease-in-out alternate;
+        }
+
+        @keyframes float1 {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(20px, 30px) rotate(5deg); }
+        }
+        @keyframes float2 {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(-30px, -20px) rotate(-8deg); }
+        }
+        @keyframes float3 {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(10px, -15px) rotate(10deg); }
+        }
+
+        /* Utility to get RGB values from CSS variables for rgba() */
+        :root {
+            --accent-color-rgb: 106, 154, 106; /* Default for greenish-white */
+            --primary-color-rgb: 224, 234, 224;
+            --button-bg-color-rgb: 85, 138, 85;
+            --card-bg-color-rgb: 28, 43, 28;
+        }
+        .theme-blue {
+            --accent-color-rgb: 79, 176, 204;
+            --primary-color-rgb: 221, 235, 240;
+            --button-bg-color-rgb: 64, 139, 176;
+            --card-bg-color-rgb: 23, 101, 135;
+        }
+        .theme-purple {
+            --accent-color-rgb: 140, 91, 176;
+            --primary-color-rgb: 232, 224, 236;
+            --button-bg-color-rgb: 123, 75, 160;
+            --card-bg-color-rgb: 75, 42, 107;
+        }
+        .theme-orange {
+            --accent-color-rgb: 214, 127, 44;
+            --primary-color-rgb: 245, 233, 221;
+            --button-bg-color-rgb: 192, 139, 91;
+            --card-bg-color-rgb: 160, 95, 47;
+        }
+        .theme-red {
+            --accent-color-rgb: 176, 79, 79;
+            --primary-color-rgb: 240, 227, 227;
+            --button-bg-color-rgb: 176, 91, 91;
+            --card-bg-color-rgb: 138, 58, 58;
+        }
+        .theme-teal {
+            --accent-color-rgb: 79, 176, 176;
+            --primary-color-rgb: 224, 239, 239;
+            --button-bg-color-rgb: 85, 154, 154;
+            --card-bg-color-rgb: 28, 107, 107;
+        }
+        .theme-indigo {
+            --accent-color-rgb: 91, 106, 176;
+            --primary-color-rgb: 227, 229, 240;
+            --button-bg-color-rgb: 106, 123, 192;
+            --card-bg-color-rgb: 60, 78, 140;
+        }
+
+
+        .card {
+            background-color: var(--card-bg-color);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            color: var(--text-color);
+        }
+        .input-field {
+            background-color: var(--input-bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+        .btn-primary {
+            background-color: var(--button-bg-color);
+            color: var(--button-text-color);
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+        }
+        .btn-primary:hover {
+            background-color: var(--accent-color);
+            transform: translateY(-1px);
+        }
+        .btn-primary:active {
+            transform: translateY(1px);
+        }
+        .error-message {
+            color: var(--error-color);
+        }
+        .app-title {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
 </head>
-<body class="flex flex-col min-h-screen">
-    <!-- Header -->
-    <header class="bg-card-bg-color p-4 shadow-md flex flex-wrap justify-between items-center rounded-b-xl sticky top-0 z-10 border-b border-border-color">
-        <div class="flex items-center">
-            <svg class="h-8 w-8 text-accent-color mr-3" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v5h-2V7zm0 6h2v2h-2v-2z"/>
-            </svg>
-            <h1 class="text-3xl font-bold app-title">Rclone WebGUI</h1>
-        </div>
-        <div class="flex items-center space-x-4 mt-2 md:mt-0">
-            <!-- Theme Changer Dropdown -->
-            <div class="relative inline-block text-left">
-                <button type="button" id="themeChangerBtn" class="btn-secondary px-4 py-2 rounded-lg text-sm font-medium focus:outline-none flex items-center">
-                    <i class="fas fa-palette mr-2"></i> Themes
-                </button>
-                <div id="themeDropdown" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-card-bg-color ring-1 ring-border-color ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="themeChangerBtn">
-                    <div class="py-1" role="none">
-                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="dark-mode">Dark Green (Default)</a>
-                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-blue">Blue</a>
-                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-purple">Purple</a>
-                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-orange">Orange</a>
-                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-red">Red</a>
-                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-teal">Teal</a>
-                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-indigo">Indigo</a>
-                    </div>
-                </div>
+<body class="flex flex-col justify-center items-center min-h-screen p-4">
+    <div class="background-shapes">
+        <div class="shape-1"></div>
+        <div class="shape-2"></div>
+        <div class="shape-3"></div>
+    </div>
+    <div class="card p-8 rounded-xl shadow-lg w-full max-w-md relative z-10">
+        <h1 class="text-4xl font-bold text-center mb-6 app-title">Rclone WebGUI Login</h1>
+        {% if error %}
+        <p class="error-message text-center mb-4 text-red-400">{{ error }}</p>
+        {% endif %}
+        <form action="/login" method="post" class="space-y-4">
+            <div>
+                <label for="username" class="block text-sm font-bold mb-2 text-primary-color">Username</label>
+                <input type="text" id="username" name="username" required
+                       class="input-field w-full p-3 rounded-lg focus:ring-2 focus:ring-accent-color focus:border-transparent outline-none">
             </div>
-            <button onclick="logout()" class="btn-danger px-4 py-2 rounded-lg text-sm font-medium hover:scale-105">
-                <i class="fas fa-sign-out-alt mr-2"></i>Logout
+            <div>
+                <label for="password" class="block text-sm font-bold mb-2 text-primary-color">Password</label>
+                <input type="password" id="password" name="password" required
+                       class="input-field w-full p-3 rounded-lg focus:ring-2 focus:ring-accent-color focus:border-transparent outline-none">
+            </div>
+            <button type="submit"
+                    class="btn-primary w-full p-3 rounded-lg font-semibold text-lg hover:shadow-md">
+                Log In
             </button>
-        </div>
-    </header>
-
-    <!-- Main Content Area -->
-    <main class="flex-1 container mx-auto p-4 flex flex-col lg:flex-row gap-4">
-
-        <!-- Left Column: Navigation and Sections -->
-        <aside class="w-full lg:w-1/4 space-y-4">
-            <!-- Navigation Buttons -->
-            <nav class="card p-4 rounded-xl shadow-md">
-                <ul class="space-y-3">
-                    <li><button onclick="showSection('setup')" class="nav-button"><i class="fas fa-cog mr-2"></i> Setup</button></li>
-                    <li><button onclick="showSection('rclone-transfer')" class="nav-button active"><i class="fas fa-sync-alt mr-2"></i> Rclone Transfer</button></li>
-                    <li><button onclick="showSection('web-terminal')" class="nav-button"><i class="fas fa-terminal mr-2"></i> Web Terminal</button></li>
-                    <li><button onclick="showSection('recent-commands')" class="nav-button"><i class="fas fa-history mr-2"></i> Recent Commands</button></li>
-                    <li><button onclick="showSection('notepad')" class="nav-button"><i class="fas fa-clipboard mr-2"></i> Notepad</button></li>
-                </ul>
-            </nav>
-        </aside>
-
-        <!-- Right Column: Dynamic Content Sections -->
-        <section class="flex-1 space-y-4">
-
-            <!-- Setup Section -->
-            <div id="setup-section" class="content-section card p-6 rounded-xl shadow-md hidden">
-                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-cogs mr-3"></i> Setup</h2>
-
-                <div class="mb-6 border border-border-color rounded-lg p-4">
-                    <h3 class="text-xl font-semibold mb-3 text-accent-color">Upload rclone.conf</h3>
-                    <p class="text-sm text-text-color mb-3">Upload your Rclone configuration file. This will overwrite any existing <code>rclone.conf</code>.</p>
-                    <label class="custom-file-upload">
-                        <input type="file" id="rclone_conf_file_input" accept=".conf" class="hidden">
-                        <span id="rclone-conf-file-name" class="file-name-display">No file chosen</span>
-                        <span class="file-button btn-secondary"><i class="fas fa-folder-open mr-2"></i> Browse</span>
-                    </label>
-                    <button onclick="uploadRcloneConf()" class="btn-primary mt-4 w-full md:w-auto"><i class="fas fa-upload mr-2"></i> Upload rclone.conf</button>
-                </div>
-
-                <div class="mb-6 border border-border-color rounded-lg p-4">
-                    <h3 class="text-xl font-semibold mb-3 text-accent-color">Upload Service Account (SA) ZIP</h3>
-                    <p class="text-sm text-text-color mb-3">Upload a ZIP file containing your service account JSON files. This will clear existing JSONs and extract new ones directly into <code>/app/.config/rclone/</code>.</p>
-                    <label class="custom-file-upload">
-                        <input type="file" id="sa_zip_file_input" accept=".zip" class="hidden">
-                        <span id="sa-zip-file-name" class="file-name-display">No file chosen</span>
-                        <span class="file-button btn-secondary"><i class="fas fa-folder-open mr-2"></i> Browse</span>
-                    </label>
-                    <button onclick="uploadSaZip()" class="btn-primary mt-4 w-full md:w-auto"><i class="fas fa-file-archive mr-2"></i> Upload SA ZIP</button>
-                </div>
-
-                <div id="majorStepsOutput" class="major-steps-output mt-4"></div>
-            </div>
-
-            <!-- Rclone Transfer Section -->
-            <div id="rclone-transfer-section" class="content-section card p-6 rounded-xl shadow-md active">
-                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-exchange-alt mr-3"></i> Rclone Transfer</h2>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div>
-                        <label for="mode" class="block text-sm font-bold mb-2 text-primary-color">Rclone Mode</label>
-                        <select id="mode" class="input-field w-full p-3 rounded-lg custom-select">
-                            <option value="sync" data-description="Make source and destination identical." selected>sync</option>
-                            <option value="copy" data-description="Copy files from source to destination.">copy</option>
-                            <option value="move" data-description="Move files from source to destination.">move</option>
-                            <option value="copyurl" data-description="Copy a URL content to destination.">copyurl</option>
-                            <option value="check" data-description="Check files in the source match the files in the destination.">check</option>
-                            <option value="cryptcheck" data-description="Cryptcheck the vault.">cryptcheck</option>
-
-                            <option value="lsd" data-description="List directories/containers in the path.">lsd</option>
-                            <option value="ls" data-description="List all files in the path.">ls</option>
-                            <option value="tree" data-description="List contents of remote in a tree-like fashion.">tree</option>
-                            <option value="mkdir" data-description="Create new directory.">mkdir</option>
-                            <option value="size" data-description="Counts objects and their sizes in a remote.">size</option>
-                            <option value="serve" data-description="Serve a remote over HTTP/WebDAV/FTP/etc.">serve</option>
-                            <option value="dedupe" data-description="Remove duplicate files.">dedupe</option>
-                            <option value="cleanup" data-description="Clean up the remote.">cleanup</option>
-                            <option value="checksum" data-description="Check files checksums.">checksum</option>
-                            <option value="delete" data-description="Remove files in the path.">delete</option>
-                            <option value="deletefile" data-description="Remove a single file from remote.">deletefile</option>
-                            <option value="purge" data-description="Remove all content in the path.">purge</option>
-
-                            <option value="listremotes" data-description="List all remotes in the config file.">listremotes</option>
-                            <option value="version" data-description="Show version and exit.">version</option>
-                        </select>
-                        <p id="mode-description" class="text-xs mt-1 text-gray-400">Make source and destination identical.</p>
-                    </div>
-
-                    <div class="relative">
-                        <label for="source" class="block text-sm font-bold mb-2 text-primary-color">Source Path</label>
-                        <div id="mode-description-inline" class="absolute top-0 right-0 text-xs text-gray-400 p-1 rounded-md max-w-[50%] overflow-hidden whitespace-nowrap text-right"></div>
-                        <input type="text" id="source" class="input-field w-full p-3 rounded-lg" value="">
-                    </div>
-                </div>
-
-                <div class="mb-6">
-                    <div id="destination-field">
-                        <label for="destination" class="block text-sm font-bold mb-2 text-primary-color">Destination Path</label>
-                        <input type="text" id="destination" class="input-field w-full p-3 rounded-lg" value="">
-                    </div>
-                </div>
-
-                <div class="mb-6">
-                    <label for="additional_flags" class="block text-sm font-bold mb-2 text-primary-color">Additional Flags</label>
-                    <input type="text" id="additional_flags" class="input-field w-full p-3 rounded-lg" value="--azureblob-env-auth --crypt-pass-bad-blocks">
-                </div>
-
-                <!-- Sliders and Dropdowns -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                    <div>
-                        <label for="transfers" class="block text-sm font-bold mb-2 text-primary-color">Transfers: <span id="transfers-value">2</span></label>
-                        <input type="range" id="transfers" min="1" max="20" value="2" step="1" class="w-full slider">
-                    </div>
-                    <div>
-                        <label for="checkers" class="block text-sm font-bold mb-2 text-primary-color">Checkers: <span id="checkers-value">3</span></label>
-                        <input type="range" id="checkers" min="1" max="20" value="3" step="1" class="w-full slider">
-                    </div>
-                    <div>
-                        <label for="buffer_size" class="block text-sm font-bold mb-2 text-primary-color">Buffer Size</label>
-                        <select id="buffer_size" class="input-field w-full p-3 rounded-lg custom-select">
-                            <option value="2M">2M</option>
-                            <option value="4M">4M</option>
-                            <option value="8M">8M</option>
-                            <option value="16M" selected>16M</option>
-                            <option value="32M">32M</option>
-                            <option value="64M">64M</option>
-                            <option value="128M">128M</option>
-                            <option value="256M">256M</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="order" class="block text-sm font-bold mb-2 text-primary-color">Order By</label>
-                        <select id="order" class="input-field w-full p-3 rounded-lg custom-select">
-                            <option value="size,ascending">size,ascending</option>
-                            <option value="size,descending">size,descending</option>
-                            <option value="size,mixed,75">size,mixed,75</option>
-                            <option value="size,mixed,50" selected>size,mixed,50</option>
-                            <option value="size,mixed,25">size,mixed,25</option>
-                            <option value="size,mixed,10">size,mixed,10</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="loglevel" class="block text-sm font-bold mb-2 text-primary-color">Log Level</label>
-                        <select id="loglevel" class="input-field w-full p-3 rounded-lg custom-select">
-                            <option value="Info" selected>Info</option>
-                            <option value="ERROR">ERROR</option>
-                            <option value="DEBUG">DEBUG</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Checkboxes -->
-                <div class="flex flex-wrap gap-4 mb-6">
-                    <label class="flex items-center text-primary-color checkbox-container">
-                        <input type="checkbox" id="use_drive_trash" class="form-checkbox h-5 w-5 text-accent-color rounded focus:ring-accent-color">
-                        <span class="ml-2">Use Drive Trash</span>
-                    </label>
-                    <label class="flex items-center text-primary-color checkbox-container">
-                        <input type="checkbox" id="service_account" class="form-checkbox h-5 w-5 text-accent-color rounded focus:ring-accent-color">
-                        <span class="ml-2">Use Service Account</span>
-                    </label>
-                    <label class="flex items-center text-primary-color checkbox-container">
-                        <input type="checkbox" id="dry_run" class="form-checkbox h-5 w-5 text-accent-color rounded focus:ring-accent-color">
-                        <span class="ml-2">Dry Run</span>
-                    </label>
-                </div>
-
-                <!-- Control Buttons -->
-                <div class="flex flex-wrap gap-4 justify-center mb-6">
-                    <button id="start-rclone-btn" class="btn-primary w-full md:w-auto flex-1"><i class="fas fa-play mr-2"></i> Start Rclone Transfer</button>
-                    <button id="stop-rclone-btn" class="btn-danger w-full md:w-auto flex-1 hidden"><i class="fas fa-stop mr-2"></i> Stop Rclone Transfer</button>
-                    <button onclick="downloadLogs()" class="btn-secondary w-full md:w-auto flex-1"><i class="fas fa-download mr-2"></i> Download Rclone Log</button>
-                </div>
-
-                <!-- Rclone Live Output -->
-                <div class="relative">
-                    <div id="rclone-spinner" class="spinner-overlay hidden">
-                        <div class="spinner"></div>
-                        <p class="mt-3 text-primary-color text-lg font-medium" id="rclone-spinner-text">Transferring...</p>
-                    </div>
-                    <pre id="rcloneLiveOutput" class="output-area min-h-[200px]"></pre>
-                </div>
-                <p id="rclone-major-steps" class="major-steps-output mt-4"></p>
-            </div>
-
-            <!-- Web Terminal Section -->
-            <div id="web-terminal-section" class="content-section card p-6 rounded-xl shadow-md hidden">
-                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-terminal mr-3"></i> Web Terminal</h2>
-
-                <div class="mb-4">
-                    <label for="terminalCommand" class="block text-sm font-bold mb-2 text-primary-color">Enter Command</label>
-                    <input type="text" id="terminalCommand" class="input-field w-full p-3 rounded-lg" placeholder="e.g., ls -la /app">
-                </div>
-
-                <div class="flex flex-wrap gap-4 justify-center mb-6">
-                    <button id="execute-terminal-btn" class="btn-primary w-full md:w-auto flex-1"><i class="fas fa-play mr-2"></i> Execute Command</button>
-                    <button id="stop-terminal-btn" class="btn-danger w-full md:w-auto flex-1 hidden"><i class="fas fa-stop mr-2"></i> Stop Process</button>
-                    <button onclick="clearTerminalOutput()" class="btn-secondary w-full md:w-auto flex-1"><i class="fas fa-eraser mr-2"></i> Clear Output</button>
-                </div>
-
-                <div class="relative">
-                    <div id="terminal-spinner" class="spinner-overlay hidden">
-                        <div class="spinner"></div>
-                        <p class="mt-3 text-primary-color text-lg font-medium" id="terminal-spinner-text">Executing command...</p>
-                    </div>
-                    <pre id="terminalOutput" class="output-area min-h-[300px]"></pre>
-                </div>
-            </div>
-
-            <!-- Recent Commands Section (formerly Modal) -->
-            <div id="recent-commands-section" class="content-section card p-6 rounded-xl shadow-md hidden">
-                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-history mr-3"></i> Recent Commands</h2>
-
-                <div class="mb-6">
-                    <h3 class="text-xl font-semibold mb-3 text-accent-color">Rclone Transfers</h3>
-                    <div id="recentRcloneTransfers" class="space-y-3">
-                        <!-- Recent Rclone transfers will be loaded here -->
-                    </div>
-                </div>
-
-                <div>
-                    <h3 class="text-xl font-semibold mb-3 text-accent-color">Web Terminal Commands</h3>
-                    <div id="recentTerminalCommands" class="space-y-3">
-                        <!-- Recent terminal commands will be loaded here -->
-                    </div>
-                </div>
-                <div class="flex justify-end mt-6">
-                    <button onclick="clearAllRecentCommands()" class="btn-danger"><i class="fas fa-trash-alt mr-2"></i> Clear All History</button>
-                </div>
-            </div>
-
-            <!-- Notepad Section -->
-            <div id="notepad-section" class="content-section card p-6 rounded-xl shadow-md hidden">
-                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-clipboard mr-3"></i> Notepad</h2>
-                <textarea id="notepad-content" class="input-field w-full p-4 rounded-lg min-h-[400px]" placeholder="Type or paste your notes here. This content will be saved automatically in your browser."></textarea>
-            </div>
-
-        </section>
-    </main>
-
-    <!-- Confirmation Modal for Terminal Process -->
-    <div id="terminalConfirmModal" class="modal hidden">
-        <div class="modal-content card rounded-xl p-8 shadow-2xl">
-            <h2 class="text-2xl font-bold mb-4 text-primary-color">Process Running</h2>
-            <p class="text-text-color mb-6" id="terminalConfirmMessage">A command is currently running: <code class="bg-input-bg-color p-1 rounded"></code>. Do you want to stop it and start a new one?</p>
-            <div class="flex justify-end space-x-4">
-                <button id="confirmStopAndStartBtn" class="btn-danger"><i class="fas fa-stop mr-2"></i> Stop and Start New</button>
-                <button id="cancelStopAndStartBtn" class="btn-secondary"><i class="fas fa-times-circle mr-2"></i> Cancel</button>
-            </div>
-        </div>
+        </form>
     </div>
 
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        // Apply saved theme on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'dark-mode';
+            document.body.className = savedTheme;
+        });
+    </script>
 </body>
 </html>
