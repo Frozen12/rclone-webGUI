@@ -10,7 +10,7 @@ import zipfile
 import shutil
 import re
 
-app = Flask(__nuame__)
+app = Flask(__name__)
 
 # --- Configuration (from Environment Variables for Render.com) ---
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'super-secret-key-please-change-me')
