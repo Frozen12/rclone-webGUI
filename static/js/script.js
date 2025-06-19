@@ -1,12 +1,15 @@
 // --- DOM Element References ---
-const rcloneTransferSection = document.getElementById('rclone-transfer-section');
 const setupSection = document.getElementById('setup-section');
+const rcloneTransferSection = document.getElementById('rclone-transfer-section');
 const webTerminalSection = document.getElementById('web-terminal-section');
+const recentCommandsSection = document.getElementById('recent-commands-section'); // New tab
+const notepadSection = document.getElementById('notepad-section'); // New tab
 
 const navButtons = document.querySelectorAll('.nav-button');
 
 const modeSelect = document.getElementById('mode');
 const modeDescription = document.getElementById('mode-description');
+const modeDescriptionInline = document.getElementById('mode-description-inline'); // New inline description
 const sourceInput = document.getElementById('source');
 const destinationField = document.getElementById('destination-field');
 const destinationInput = document.getElementById('destination');
@@ -29,8 +32,10 @@ const rcloneMajorStepsOutput = document.getElementById('rclone-major-steps');
 const rcloneSpinner = document.getElementById('rclone-spinner');
 const rcloneSpinnerText = document.getElementById('rclone-spinner-text');
 
-const rcloneConfFile = document.getElementById('rcloneConfFile');
-const saZipFile = document.getElementById('saZipFile');
+const rcloneConfFileInput = document.getElementById('rclone_conf_file_input'); // Renamed ID
+const rcloneConfFileNameDisplay = document.getElementById('rclone-conf-file-name'); // New element
+const saZipFileInput = document.getElementById('sa_zip_file_input'); // Renamed ID
+const saZipFileNameDisplay = document.getElementById('sa-zip-file-name'); // New element
 const majorStepsOutput = document.getElementById('majorStepsOutput');
 
 const terminalCommandInput = document.getElementById('terminalCommand');
@@ -44,10 +49,10 @@ const terminalConfirmMessage = document.getElementById('terminalConfirmMessage')
 const confirmStopAndStartBtn = document.getElementById('confirmStopAndStartBtn');
 const cancelStopAndStartBtn = document.getElementById('cancelStopAndStartBtn');
 
-
-const recentCommandsModal = document.getElementById('recentCommandsModal');
 const recentRcloneTransfersDiv = document.getElementById('recentRcloneTransfers');
 const recentTerminalCommandsDiv = document.getElementById('recentTerminalCommands');
+
+const notepadContent = document.getElementById('notepad-content');
 
 
 // --- Global State Variables ---
@@ -80,9 +85,9 @@ const RcloneModeDescriptions = {
     "version": "Show version and exit."
 };
 
-const twoRemoteModes = [
-    "sync", "copy", "move", "copyurl", "check", "cryptcheck"
-];
+const modesSrcDest = ["sync", "copy", "move", "copyurl", "check", "cryptcheck"];
+const modesSrcOnly = ["lsd", "ls", "tree", "mkdir", "size", "serve", "dedupe", "cleanup", "delete", "deletefile", "purge", "checksum"]; // Checksum added here
+const modesNoArgs = ["listremotes", "version"];
 
 const potentiallyDestructiveModes = ["delete", "purge"];
 
@@ -91,7 +96,7 @@ function showSection(sectionId) {
     // Hide all sections
     document.querySelectorAll('.content-section').forEach(section => {
         section.classList.add('hidden');
-        section.classList.remove('active');
+        section.classList.remove('active'); // Remove active class for styling
     });
     // Deactivate all nav buttons
     navButtons.forEach(button => button.classList.remove('active'));
@@ -100,7 +105,7 @@ function showSection(sectionId) {
     const selectedSection = document.getElementById(`${sectionId}-section`);
     if (selectedSection) {
         selectedSection.classList.remove('hidden');
-        selectedSection.classList.add('active');
+        selectedSection.classList.add('active'); // Add active class for styling
     }
 
     // Activate the corresponding nav button
@@ -114,6 +119,11 @@ function showSection(sectionId) {
         startTerminalPolling();
     } else {
         stopTerminalPolling();
+    }
+
+    // Load notepad content if switching to notepad section
+    if (sectionId === 'notepad') {
+        loadNotepadContent();
     }
     // Rclone polling runs independently, as it can be active in background
 }
@@ -139,7 +149,9 @@ function hideTerminalSpinner() {
 // --- Rclone Mode Logic ---
 function updateModeDescription() {
     const selectedMode = modeSelect.value;
-    modeDescription.textContent = RcloneModeDescriptions[selectedMode] || "No description available.";
+    const description = RcloneModeDescriptions[selectedMode] || "No description available.";
+    modeDescription.textContent = description;
+    modeDescriptionInline.textContent = description; // Update inline description
 
     // Warn about destructive modes
     if (potentiallyDestructiveModes.includes(selectedMode)) {
@@ -147,23 +159,35 @@ function updateModeDescription() {
         rcloneMajorStepsOutput.style.display = 'block';
     } else {
         rcloneMajorStepsOutput.style.display = 'none'; // Hide if not destructive
-        rcloneMajorStepsOutput.innerHTML = '';
+        rcloneMajorStepsOutput.innerHTML = ''; // Clear content
     }
 }
 
 function toggleRemoteField() {
     const selectedMode = modeSelect.value;
-    if (twoRemoteModes.includes(selectedMode)) {
-        destinationField.classList.remove('hidden');
+
+    // Show/hide source and destination fields based on mode type
+    if (modesSrcDest.includes(selectedMode)) {
+        sourceInput.closest('div').classList.remove('hidden'); // Show source field (its parent div)
+        destinationField.classList.remove('hidden'); // Show destination field
+        sourceInput.setAttribute('required', 'true');
         destinationInput.setAttribute('required', 'true');
-    } else {
-        destinationField.classList.add('hidden');
+    } else if (modesSrcOnly.includes(selectedMode)) {
+        sourceInput.closest('div').classList.remove('hidden'); // Show source field
+        destinationField.classList.add('hidden'); // Hide destination field
+        sourceInput.setAttribute('required', 'true');
+        destinationInput.removeAttribute('required');
+    } else if (modesNoArgs.includes(selectedMode)) {
+        sourceInput.closest('div').classList.add('hidden'); // Hide source field
+        destinationField.classList.add('hidden'); // Hide destination field
+        sourceInput.removeAttribute('required');
         destinationInput.removeAttribute('required');
     }
 }
 
+
 // --- Generic File Upload ---
-async function uploadFile(fileInput, endpoint, outputElement, successMessage) {
+async function uploadFile(fileInput, fileNameDisplay, endpoint, outputElement, successMessage) {
     const file = fileInput.files[0];
     if (!file) {
         logMessage(outputElement, "No file selected.", 'error');
@@ -171,7 +195,7 @@ async function uploadFile(fileInput, endpoint, outputElement, successMessage) {
     }
 
     const formData = new FormData();
-    formData.append(fileInput.id, file); // Use the input's ID as the form field name
+    formData.append(fileInput.id, file);
 
     logMessage(outputElement, `Uploading ${file.name}...`, 'info');
 
@@ -179,6 +203,7 @@ async function uploadFile(fileInput, endpoint, outputElement, successMessage) {
         const response = await fetch(endpoint, {
             method: 'POST',
             body: formData,
+            // DO NOT set Content-Type header manually when using FormData, browser sets it correctly
         });
 
         const result = await response.json();
@@ -191,15 +216,16 @@ async function uploadFile(fileInput, endpoint, outputElement, successMessage) {
         logMessage(outputElement, `Network error during upload: ${error.message}`, 'error');
     } finally {
         fileInput.value = ''; // Clear the file input
+        fileNameDisplay.textContent = 'No file chosen'; // Reset file name display
     }
 }
 
 function uploadRcloneConf() {
-    uploadFile(rcloneConfFile, '/upload-rclone-conf', majorStepsOutput, 'Rclone config uploaded');
+    uploadFile(rcloneConfFileInput, rcloneConfFileNameDisplay, '/upload-rclone-conf', majorStepsOutput, 'Rclone config uploaded');
 }
 
 function uploadSaZip() {
-    uploadFile(saZipFile, '/upload-sa-zip', majorStepsOutput, 'Service accounts uploaded');
+    uploadFile(saZipFileInput, saZipFileNameDisplay, '/upload-sa-zip', majorStepsOutput, 'Service accounts uploaded');
 }
 
 // --- Rclone Transfer Logic ---
@@ -213,16 +239,16 @@ async function startRcloneTransfer() {
     const source = sourceInput.value.trim();
     const destination = destinationInput.value.trim();
 
-    // Basic validation for two-remote commands
-    if (twoRemoteModes.includes(mode) && (!source || !destination)) {
+    // Re-validate based on current UI state
+    if (modesSrcDest.includes(mode) && (!source || !destination)) {
         logMessage(rcloneMajorStepsOutput, "Source and Destination are required for this Rclone mode.", 'error');
         return;
     }
-    // Basic validation for one-remote commands
-    if (!twoRemoteModes.includes(mode) && !source) {
+    if (modesSrcOnly.includes(mode) && !source) {
          logMessage(rcloneMajorStepsOutput, "Source is required for this Rclone mode.", 'error');
         return;
     }
+
 
     rcloneLiveOutput.textContent = ''; // Clear previous output
     logMessage(rcloneMajorStepsOutput, 'Initializing Rclone transfer...', 'info');
@@ -258,6 +284,11 @@ async function startRcloneTransfer() {
         if (!response.ok) {
             const errorData = await response.json();
             logMessage(rcloneMajorStepsOutput, `Error: ${errorData.message}`, 'error');
+            // Ensure buttons are reset on error immediately
+            hideRcloneSpinner();
+            isRcloneProcessRunning = false;
+            startRcloneBtn.classList.remove('hidden');
+            stopRcloneBtn.classList.add('hidden');
             return;
         }
 
@@ -385,7 +416,10 @@ async function downloadLogs() {
             const a = document.createElement('a');
             a.style.display = 'none';
             a.href = url;
-            a.download = response.headers.get('Content-Disposition').split('filename=')[1].replace(/"/g, '');
+            // Get filename from Content-Disposition header if available, otherwise default
+            const contentDisposition = response.headers.get('Content-Disposition');
+            const filenameMatch = contentDisposition && contentDisposition.match(/filename="?([^"]+)"?/);
+            a.download = filenameMatch ? filenameMatch[1] : `rclone_webgui_log_${new Date().toISOString().slice(0,10)}.txt`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -430,7 +464,7 @@ async function executeTerminalCommand(command = null) {
             terminalCommandInput.value = ''; // Clear input field
         } else if (result.status === 'warning' && result.message.includes("already running")) {
             // Show confirmation modal
-            terminalConfirmMessage.innerHTML = `A command is currently running: <code class="bg-input-bg-color p-1 rounded-md text-sm">${result.running_command}</code>. Do you want to stop it and start a new one?`;
+            terminalConfirmMessage.innerHTML = `A command is currently running: <code class="bg-input-bg-color p-1 rounded-md text-sm">${escapeHtml(result.running_command)}</code>. Do you want to stop it and start a new one?`;
             terminalConfirmModal.classList.remove('hidden');
             pendingTerminalCommand = cmdToExecute; // Store the new command
         } else {
@@ -528,7 +562,7 @@ function saveCommandToHistory(command) {
         commands.pop();
     }
     localStorage.setItem('terminalCommands', JSON.stringify(commands));
-    updateRecentCommandsModalContent(); // Refresh modal if open
+    // updateRecentCommandsModalContent(); // No longer a modal, will load when tab is clicked
 }
 
 function saveRcloneTransferToHistory(mode, source, destination, status) {
@@ -544,7 +578,7 @@ function saveRcloneTransferToHistory(mode, source, destination, status) {
         transfers.pop();
     }
     localStorage.setItem('rcloneTransfers', JSON.stringify(transfers));
-    updateRecentCommandsModalContent(); // Refresh modal if open
+    // updateRecentCommandsModalContent(); // No longer a modal, will load when tab is clicked
 }
 
 
@@ -592,7 +626,7 @@ function loadRecentCommands() {
         });
     }
 
-    // Add event listeners for copy buttons
+    // Add event listeners for copy buttons (must be done after content is loaded)
     document.querySelectorAll('.btn-copy-command').forEach(button => {
         button.onclick = (e) => copyToClipboard(e.target.dataset.command || e.target.closest('button').dataset.command);
     });
@@ -604,21 +638,23 @@ function loadRecentCommands() {
     });
 }
 
+
 function clearAllRecentCommands() {
     if (confirm("Are you sure you want to clear all recent commands and transfers history?")) {
         localStorage.removeItem('terminalCommands');
         localStorage.removeItem('rcloneTransfers');
-        updateRecentCommandsModalContent();
+        loadRecentCommands(); // Reload to show empty state
         logMessage(majorStepsOutput, "All recent commands and transfers history cleared.", 'info');
     }
 }
 
+// --- Notepad Logic ---
+function saveNotepadContent() {
+    localStorage.setItem('notepadContent', notepadContent.value);
+}
 
-function toggleRecentCommandsModal() {
-    recentCommandsModal.classList.toggle('hidden');
-    if (!recentCommandsModal.classList.contains('hidden')) {
-        loadRecentCommands(); // Load/refresh content when modal is shown
-    }
+function loadNotepadContent() {
+    notepadContent.value = localStorage.getItem('notepadContent') || '';
 }
 
 // Utility to escape HTML for display
@@ -641,7 +677,31 @@ function copyToClipboard(text) {
     textarea.select();
     try {
         const successful = document.execCommand('copy');
-        logMessage(majorStepsOutput, successful ? "Copied to clipboard!" : "Failed to copy!", successful ? 'success' : 'error');
+        // A simple visual feedback for copy
+        const copyFeedback = document.createElement('span');
+        copyFeedback.textContent = successful ? "Copied!" : "Failed to copy!";
+        copyFeedback.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(var(--card-bg-color-rgb, 28, 43, 28), 0.9);
+            color: var(--primary-color);
+            padding: 10px 20px;
+            border-radius: 8px;
+            z-index: 1001;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        `;
+        document.body.appendChild(copyFeedback);
+        setTimeout(() => {
+            copyFeedback.style.opacity = 1;
+        }, 10); // Small delay to trigger transition
+        setTimeout(() => {
+            copyFeedback.style.opacity = 0;
+            copyFeedback.remove();
+        }, 1500); // Hide after 1.5 seconds
+
     } catch (err) {
         logMessage(majorStepsOutput, "Failed to copy to clipboard (unsupported by browser).", 'error');
     }
@@ -695,7 +755,15 @@ document.addEventListener('DOMContentLoaded', () => {
     showSection('rclone-transfer'); // Show Rclone Transfer section by default
     updateModeDescription(); // Set initial mode description
     toggleRemoteField(); // Set initial destination field visibility
-    loadRecentCommands(); // Load recent commands on startup
+
+    // Listen for file input changes to display file name
+    rcloneConfFileInput.addEventListener('change', (event) => {
+        rcloneConfFileNameDisplay.textContent = event.target.files[0] ? event.target.files[0].name : 'No file chosen';
+    });
+    saZipFileInput.addEventListener('change', (event) => {
+        saZipFileNameDisplay.textContent = event.target.files[0] ? event.target.files[0].name : 'No file chosen';
+    });
+
 
     // Rclone Form Events
     modeSelect.addEventListener('change', () => {
@@ -739,19 +807,13 @@ document.addEventListener('DOMContentLoaded', () => {
         stopTerminalBtn.classList.add('hidden');
     });
 
-    // Close modal if clicked outside content
-    recentCommandsModal.addEventListener('click', (event) => {
-        if (event.target === recentCommandsModal) {
-            toggleRecentCommandsModal();
-        }
-    });
+    // Notepad auto-save
+    notepadContent.addEventListener('input', saveNotepadContent);
+
 
     // Close modal on Escape key press
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
-            if (!recentCommandsModal.classList.contains('hidden')) {
-                toggleRecentCommandsModal();
-            }
             if (!terminalConfirmModal.classList.contains('hidden')) {
                 terminalConfirmModal.classList.add('hidden');
                 pendingTerminalCommand = null; // Clear pending command
@@ -762,4 +824,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    // Event listener for Recent Commands tab to load content when clicked
+    document.querySelector('.nav-button[onclick*="recent-commands"]').addEventListener('click', loadRecentCommands);
 });
