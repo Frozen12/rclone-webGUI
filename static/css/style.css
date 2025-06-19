@@ -1,22 +1,322 @@
-/* Import Tailwind CSS from CDN */
-@import url("https://cdn.tailwindcss.com");
+/* Import Tailwind CSS - though CDN is used in HTML, this would be for a build process */
+/* @tailwind base; */
+/* @tailwind components; */
+/* @tailwind utilities; */
 
-/* Custom Styles for scrollbar and text selection to fit theme */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+/* --- Custom CSS Variables for Theming --- */
+:root {
+    /* Emerald Theme (Default - Greenish White Monochromatic) */
+    --color-background-primary: #F8FBF8; /* Off-white, subtle green hint */
+    --color-background-secondary: #E8F5E9; /* Lighter green tint */
+    --color-text-primary: #2C3E50; /* Dark blue-gray */
+    --color-text-secondary: #5A6A7A; /* Medium gray */
+    --color-text-highlight: #1B5E20; /* Dark forest green */
+    --color-border: #B2D7D1; /* Light teal-green */
+    --color-input-background: #FFFFFF;
+    --color-accent: #38B27E; /* Tailwind emerald-500 */
+    --color-accent-hover: #2F9C6E; /* Darker emerald */
+    --color-danger: #EF4444; /* Tailwind red-500 */
+    --color-danger-hover: #DC2626; /* Darker red */
+    --color-info: #3B82F6; /* Tailwind blue-500 */
+    --color-success: #10B981; /* Tailwind emerald-600 */
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-medium: 0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-large: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
 }
-::-webkit-scrollbar-track {
-    background: #1a202c; /* Darker track */
+
+/* --- Dark Mode Variables --- */
+.dark {
+    --color-background-primary: #1A202C; /* Dark blue-gray */
+    --color-background-secondary: #2D3748; /* Slightly lighter dark blue-gray */
+    --color-text-primary: #E2E8F0; /* Light gray */
+    --color-text-secondary: #A0AEC0; /* Medium light gray */
+    --color-text-highlight: #38B27E; /* Emerald for highlights */
+    --color-border: #4A5568; /* Darker gray */
+    --color-input-background: #2D3748;
+    /* Accent colors remain the same for consistency across themes */
 }
-::-webkit-scrollbar-thumb {
-    background: #4a5568; /* Grayish thumb */
-    border-radius: 4px;
+
+
+/* --- Theming Overrides (Dynamic via JS) --- */
+.theme-emerald {
+    --color-accent: #38B27E; /* Emerald-500 */
+    --color-accent-hover: #2F9C6E;
+    --color-background-primary: #F8FBF8;
+    --color-background-secondary: #E8F5E9;
+    --color-text-highlight: #1B5E20;
+    --color-border: #B2D7D1;
 }
-::-webkit-scrollbar-thumb:hover {
-    background: #606f8b; /* Lighter on hover */
+.theme-blue {
+    --color-accent: #3B82F6; /* Blue-500 */
+    --color-accent-hover: #2563EB;
+    --color-background-primary: #F0F8FF;
+    --color-background-secondary: #E0EFFC;
+    --color-text-highlight: #1E40AF;
+    --color-border: #9BB8D4;
 }
-::selection {
-    background-color: #63b3ed; /* Light blue selection */
-    color: #1a202c;
+.theme-purple {
+    --color-accent: #9333EA; /* Purple-600 */
+    --color-accent-hover: #7E22CE;
+    --color-background-primary: #F9F5FF;
+    --color-background-secondary: #F0E6FA;
+    --color-text-highlight: #6B21A8;
+    --color-border: #C8B5E8;
+}
+.theme-red {
+    --color-accent: #EF4444; /* Red-500 */
+    --color-accent-hover: #DC2626;
+    --color-background-primary: #FFF5F5;
+    --color-background-secondary: #FFE0E0;
+    --color-text-highlight: #B91C1C;
+    --color-border: #E3B2B2;
+}
+.theme-orange {
+    --color-accent: #F97316; /* Orange-500 */
+    --color-accent-hover: #EA580C;
+    --color-background-primary: #FFF9F5;
+    --color-background-secondary: #FFF0E0;
+    --color-text-highlight: #C2410C;
+    --color-border: #E8B49B;
+}
+.theme-indigo {
+    --color-accent: #6366F1; /* Indigo-500 */
+    --color-accent-hover: #4F46E5;
+    --color-background-primary: #F7F7FF;
+    --color-background-secondary: #E9E9FE;
+    --color-text-highlight: #4338CA;
+    --color-border: #B2B4E9;
+}
+
+
+/* --- General Application Styles (using CSS variables) --- */
+body {
+    background-color: var(--color-background-primary);
+    color: var(--color-text-primary);
+}
+
+header {
+    background-image: linear-gradient(to right, var(--color-accent), var(--color-accent-hover));
+}
+
+/* Nav Buttons */
+.nav-button {
+    @apply flex items-center px-5 py-3 rounded-xl font-semibold transition-all duration-200 shadow-sm text-gray-700 dark:text-gray-300;
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-border);
+}
+.nav-button:hover {
+    @apply transform scale-105 shadow-md;
+    background-color: var(--color-accent);
+    color: white;
+}
+.nav-button.nav-active {
+    @apply transform scale-105 shadow-md;
+    background-color: var(--color-accent);
+    color: white;
+    font-weight: 700;
+}
+
+/* Section Card */
+.section-card {
+    @apply bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 transition-colors duration-300;
+}
+
+.section-title {
+    @apply text-3xl font-extrabold mb-8 text-gray-800 dark:text-gray-100 border-b-2 pb-4;
+    border-color: var(--color-border);
+}
+
+/* Form Elements */
+.input-label {
+    @apply block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300;
+}
+
+.input-field {
+    @apply block w-full p-3 border rounded-xl shadow-sm text-gray-800 dark:text-gray-200;
+    background-color: var(--color-input-background);
+    border-color: var(--color-border);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.input-field:focus {
+    @apply outline-none ring-2;
+    border-color: var(--color-accent);
+    --tw-ring-color: rgba(var(--color-accent-rgb), 0.4); /* Use JS for RGB */
+    box-shadow: 0 0 0 3px var(--color-accent-glow); /* Custom property for glow */
+}
+
+.slider-field {
+    @apply w-full h-2 rounded-lg appearance-none cursor-pointer;
+    background: var(--color-border);
+    outline: none;
+    transition: opacity .2s;
+}
+.slider-field::-webkit-slider-thumb {
+    @apply appearance-none w-5 h-5 rounded-full shadow-md;
+    background: var(--color-accent);
+    cursor: pointer;
+}
+.slider-field::-moz-range-thumb {
+    @apply w-5 h-5 rounded-full shadow-md;
+    background: var(--color-accent);
+    cursor: pointer;
+}
+
+.checkbox-field {
+    @apply h-5 w-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500;
+    border-color: var(--color-border);
+    background-color: var(--color-input-background);
+}
+.checkbox-field:checked {
+    background-color: var(--color-accent); /* Ensures it's themed */
+}
+
+
+.file-input {
+    @apply block w-full text-sm text-gray-700 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 transition-colors duration-200;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem; /* rounded-xl */
+    padding: 0.5rem;
+    background-color: var(--color-input-background);
+}
+
+
+/* Buttons */
+.button-base {
+    @apply px-6 py-3 rounded-xl font-semibold shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-opacity-75;
+}
+
+.button-primary {
+    @apply button-base text-white;
+    background-color: var(--color-accent);
+    box-shadow: 0 4px 6px -1px rgba(var(--color-accent-rgb), 0.3), 0 2px 4px -1px rgba(var(--color-accent-rgb), 0.1); /* Custom shadow */
+}
+.button-primary:hover {
+    @apply transform -translate-y-0.5;
+    background-color: var(--color-accent-hover);
+    box-shadow: 0 6px 10px -1px rgba(var(--color-accent-rgb), 0.4), 0 3px 6px -1px rgba(var(--color-accent-rgb), 0.2);
+}
+.button-primary:active {
+    @apply transform translate-y-0;
+    box-shadow: var(--shadow-sm);
+}
+.button-primary:focus {
+    --tw-ring-color: rgba(var(--color-accent-rgb), 0.5);
+}
+
+.button-secondary {
+    @apply button-base text-gray-700 dark:text-gray-300;
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-border);
+}
+.button-secondary:hover {
+    @apply transform -translate-y-0.5;
+    background-color: var(--color-border);
+    box-shadow: var(--shadow-medium);
+}
+.button-secondary:active {
+    @apply transform translate-y-0;
+}
+.button-secondary:focus {
+    --tw-ring-color: rgba(var(--color-accent-rgb), 0.5);
+}
+
+.button-primary-outline {
+    @apply button-base border-2;
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    background-color: transparent;
+}
+.button-primary-outline:hover {
+    @apply text-white transform -translate-y-0.5;
+    background-color: var(--color-accent);
+    box-shadow: var(--shadow-medium);
+}
+.button-primary-outline:active {
+    @apply transform translate-y-0;
+}
+.button-primary-outline:focus {
+    --tw-ring-color: rgba(var(--color-accent-rgb), 0.5);
+}
+
+.button-danger {
+    @apply button-base text-white;
+    background-color: var(--color-danger);
+    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3), 0 2px 4px -1px rgba(239, 68, 68, 0.1);
+}
+.button-danger:hover {
+    @apply transform -translate-y-0.5;
+    background-color: var(--color-danger-hover);
+    box-shadow: 0 6px 10px -1px rgba(239, 68, 68, 0.4), 0 3px 6px -1px rgba(239, 68, 68, 0.2);
+}
+.button-danger:active {
+    @apply transform translate-y-0;
+}
+.button-danger:focus {
+    --tw-ring-color: rgba(239, 68, 68, 0.5);
+}
+
+.button-disabled {
+    @apply opacity-50 cursor-not-allowed shadow-none;
+    transform: none !important;
+    background-color: var(--color-border) !important;
+    color: var(--color-text-secondary) !important;
+}
+.button-disabled:hover {
+    background-color: var(--color-border) !important;
+}
+
+.button-icon {
+    @apply p-2 rounded-full transition-colors duration-200;
+    color: var(--color-text-secondary);
+}
+.button-icon:hover {
+    background-color: var(--color-border);
+    color: var(--color-accent);
+}
+
+
+/* Output Areas */
+.output-area {
+    @apply bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border font-mono whitespace-pre-wrap break-all text-gray-700 dark:text-gray-300;
+    border-color: var(--color-border);
+    max-height: 250px;
+}
+/* Specific output colors for success/error */
+.output-area.success { color: var(--color-success); }
+.output-area.error { color: var(--color-danger); }
+
+/* Loading Spinner */
+.loading-spinner {
+    @apply flex flex-col items-center justify-center p-4 my-4 rounded-xl shadow-inner;
+    background-color: var(--color-background-secondary);
+    border: 1px solid var(--color-border);
+}
+.spinner {
+    @apply w-8 h-8 rounded-full animate-spin;
+    border-color: var(--color-accent) transparent transparent transparent;
+}
+
+
+/* Modal Styles */
+.modal-overlay {
+    @apply fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center z-50;
+}
+.modal-content {
+    @apply bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl max-w-2xl w-full mx-4 border border-gray-200 dark:border-gray-700;
+}
+
+/* Utilities for color theme changing based on JS */
+.body-emerald header { background-image: linear-gradient(to right, #38B27E, #2F9C6E); }
+.body-blue header { background-image: linear-gradient(to right, #3B82F6, #2563EB); }
+.body-purple header { background-image: linear-gradient(to right, #9333EA, #7E22CE); }
+.body-red header { background-image: linear-gradient(to right, #EF4444, #DC2626); }
+.body-orange header { background-image: linear-gradient(to right, #F97316, #EA580C); }
+.body-indigo header { background-image: linear-gradient(to right, #6366F1, #4F46E5); }
+
+
+/* Ensure consistent font throughout */
+body {
+    font-family: 'Inter', sans-serif;
 }
