@@ -21,9 +21,30 @@ RUN apk update && \
     build-base && \
     rm -rf /var/cache/apk/*
 
-# Install Rclone using the official script
-# Note: Rclone will be installed to /usr/bin/rclone by default
-RUN curl https://rclone.org/install.sh | bash
+# Install rclone using the "current" link for the latest stable version
+RUN set -eux; \
+    # Download the latest rclone zip archive
+    curl -O https://downloads.rclone.org/rclone-current-linux-amd64.zip; \
+    \
+    # Create a temporary directory for extraction
+    mkdir -p /tmp/rclone-extracted; \
+    \
+    # Unzip the file into the temporary directory
+    unzip -q rclone-current-linux-amd64.zip -d /tmp/rclone-extracted/; \
+    \
+    # Find the extracted rclone executable (its path inside the zip can vary slightly)
+    # The find command is robust against changes in the extracted directory name (e.g., rclone-vX.Y.Z-linux-amd64)
+    find /tmp/rclone-extracted -type f -name "rclone" -exec mv {} /usr/bin/ \; ; \
+    \
+    # Clean up temporary files and directories
+    rm -rf rclone-current-linux-amd64.zip /tmp/rclone-extracted; \
+    \
+    # Make rclone executable
+    chmod +x /usr/bin/rclone; \
+    \
+    # Verify rclone installation
+    rclone version
+
 # Set the working directory in the container
 WORKDIR /app
 
