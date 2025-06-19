@@ -3,47 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <link href="https://cdn.tailwindcss.com" rel="stylesheet">
+    <title>Login - Rclone WebGUI</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
-        /* Custom Styles for scrollbar and text selection to fit theme */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+        /* Specific styles for the login page to fit the greenish-white theme */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-background-primary);
+            color: var(--color-text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
         }
-        ::-webkit-scrollbar-track {
-            background: #1a202c; /* Darker track */
+        .login-container {
+            background-color: var(--color-background-secondary);
+            border: 1px solid var(--color-border);
+            box-shadow: var(--shadow-medium);
+            padding: 2.5rem;
+            border-radius: 1rem;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
         }
-        ::-webkit-scrollbar-thumb {
-            background: #4a5568; /* Grayish thumb */
-            border-radius: 4px;
+        .login-container h1 {
+            color: var(--color-text-highlight);
+            margin-bottom: 1.5rem;
+            font-size: 1.75rem;
+            font-weight: 700;
         }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #606f8b; /* Lighter on hover */
+        .form-group {
+            margin-bottom: 1.25rem;
+            text-align: left;
         }
-        ::selection {
-            background-color: #63b3ed; /* Light blue selection */
-            color: #1a202c;
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--color-text-secondary);
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 1px solid var(--color-border);
+            border-radius: 0.6rem;
+            background-color: var(--color-input-background);
+            color: var(--color-text-primary);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .form-group input:focus {
+            border-color: var(--color-accent-hover);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(165, 243, 209, 0.4); /* Tailwind's emerald-200 equivalent */
+        }
+        .login-button {
+            width: 100%;
+            padding: 0.8rem 1.5rem;
+            background-color: var(--color-accent);
+            color: white;
+            border: none;
+            border-radius: 0.6rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+            box-shadow: var(--shadow-sm);
+        }
+        .login-button:hover {
+            background-color: var(--color-accent-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-medium);
+        }
+        .login-button:active {
+            transform: translateY(0);
+        }
+        .error-message {
+            color: #ef4444; /* Tailwind red-500 */
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            font-weight: 500;
         }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-6 bg-gray-900 text-gray-200 font-sans">
-    <div class="max-w-md w-full mx-auto bg-gray-800 p-8 rounded-xl shadow-xl border border-gray-700">
-        <h2 class="text-4xl font-bold text-center mb-8 text-blue-400">Login</h2>
-        <form action="/login" method="POST">
-            <div class="mb-5">
-                <label for="username" class="block text-gray-300 text-sm font-semibold mb-2">Username:</label>
-                <input type="text" id="username" name="username" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400" required>
+<body>
+    <div class="login-container">
+        <h1>Rclone WebGUI Login</h1>
+        <form action="{{ url_for('login') }}" method="POST">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
             </div>
-            <div class="mb-6">
-                <label for="password" class="block text-gray-300 text-sm font-semibold mb-2">Password:</label>
-                <input type="password" id="password" name="password" class="shadow-sm appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 placeholder-gray-400" required>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
             </div>
-            <div class="flex items-center justify-between">
-                <button type="submit" class="w-full px-5 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-200 ease-in-out">Sign In</button>
-            </div>
+            <button type="submit" class="login-button">Login</button>
             {% if error %}
-                <p class="text-red-500 text-center text-sm mt-4">{{ error }}</p>
+                <p class="error-message">{{ error }}</p>
             {% endif %}
         </form>
     </div>
