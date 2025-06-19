@@ -1,859 +1,558 @@
-// --- DOM Element References ---
-const setupSection = document.getElementById('setup-section');
-const rcloneTransferSection = document.getElementById('rclone-transfer-section');
-const webTerminalSection = document.getElementById('web-terminal-section');
-const recentCommandsSection = document.getElementById('recent-commands-section'); // New tab
-const notepadSection = document.getElementById('notepad-section'); // New tab
-
-const navButtons = document.querySelectorAll('.nav-button');
-
-const modeSelect = document.getElementById('mode');
-const modeDescription = document.getElementById('mode-description');
-// const modeDescriptionInline = document.getElementById('mode-description-inline'); // Removed as per request
-const sourceField = document.getElementById('source'); // This is the input itself now
-const sourceInput = document.getElementById('source');
-const destinationField = document.getElementById('destination-field'); // This is the div wrapping destination input
-const destinationInput = document.getElementById('destination');
-const transfersInput = document.getElementById('transfers');
-const transfersValueSpan = document.getElementById('transfers-value');
-const checkersInput = document.getElementById('checkers');
-const checkersValueSpan = document.getElementById('checkers-value');
-const bufferSizeSelect = document.getElementById('buffer_size');
-const orderSelect = document.getElementById('order');
-const loglevelSelect = document.getElementById('loglevel');
-const additionalFlagsInput = document.getElementById('additional_flags');
-const useDriveTrashCheckbox = document.getElementById('use_drive_trash');
-const serviceAccountCheckbox = document.getElementById('service_account');
-const dryRunCheckbox = document.getElementById('dry_run');
-
-const startRcloneBtn = document.getElementById('start-rclone-btn');
-const stopRcloneBtn = document.getElementById('stop-rclone-btn');
-const rcloneLiveOutput = document.getElementById('rcloneLiveOutput');
-const rcloneMajorStepsOutput = document.getElementById('rclone-major-steps');
-const rcloneSpinner = document.getElementById('rclone-spinner');
-const rcloneSpinnerText = document.getElementById('rclone-spinner-text');
-
-const rcloneConfFileInput = document.getElementById('rclone_conf_file_input');
-const rcloneConfFileNameDisplay = document.getElementById('rclone-conf-file-name');
-const saZipFileInput = document.getElementById('sa_zip_file_input');
-const saZipFileNameDisplay = document.getElementById('sa-zip-file-name');
-const majorStepsOutput = document.getElementById('majorStepsOutput');
-
-const terminalCommandInput = document.getElementById('terminalCommand');
-const executeTerminalBtn = document.getElementById('execute-terminal-btn');
-const stopTerminalBtn = document.getElementById('stop-terminal-btn');
-const terminalOutput = document.getElementById('terminalOutput');
-const terminalSpinner = document.getElementById('terminal-spinner');
-const terminalSpinnerText = document.getElementById('terminal-spinner-text');
-const terminalConfirmModal = document.getElementById('terminalConfirmModal');
-const terminalConfirmMessage = document.getElementById('terminalConfirmMessage');
-const confirmStopAndStartBtn = document.getElementById('confirmStopAndStartBtn');
-const cancelStopAndStartBtn = document.getElementById('cancelStopAndStartBtn');
-
-const recentRcloneTransfersDiv = document.getElementById('recentRcloneTransfers');
-const recentTerminalCommandsDiv = document.getElementById('recentTerminalCommands');
-
-const notepadContent = document.getElementById('notepad-content');
-
-
-// --- Global State Variables ---
-let rclonePollingInterval = null;
-let terminalPollingInterval = null;
-let isRcloneProcessRunning = false;
-let isTerminalProcessRunning = false;
-let pendingTerminalCommand = null; // Stores command if user confirms stop & start
-
-// For header scroll behavior
-let lastScrollY = 0;
-const header = document.querySelector('header');
-const headerHeight = header.offsetHeight;
-
-
-const RcloneModeDescriptions = {
-    "sync": "Make source and destination identical.",
-    "copy": "Copy files from source to destination.",
-    "move": "Move files from source to destination.",
-    "copyurl": "Copy a URL content to destination.",
-    "check": "Check files in the source match the files in the destination.",
-    "cryptcheck": "Cryptcheck the vault.",
-    "lsd": "List directories/containers in the path.",
-    "ls": "List all files in the path.",
-    "tree": "List contents of remote in a tree-like fashion.",
-    "listremotes": "List all remotes in the config file.",
-    "mkdir": "Create new directory.",
-    "size": "Counts objects and their sizes in a remote.",
-    "serve": "Serve a remote over HTTP/WebDAV/FTP/etc.",
-    "dedupe": "Remove duplicate files.",
-    "cleanup": "Clean up the remote.",
-    "checksum": "Check files checksums.",
-    "delete": "Remove files in the path.",
-    "deletefile": "Remove a single file from remote.",
-    "purge": "Remove all content in the path.",
-    "version": "Show version and exit."
-};
-
-const modesTwoRemotes = ["sync", "copy", "move", "copyurl", "check", "cryptcheck"];
-const modesOneRemote = ["lsd", "ls", "tree", "mkdir", "size", "serve", "dedupe", "cleanup", "delete", "deletefile", "purge", "checksum"];
-const modesNoArgs = ["listremotes", "version"];
-
-const potentiallyDestructiveModes = ["delete", "purge"];
-
-// --- UI Toggling Functions ---
-function showSection(sectionId) {
-    // Hide all sections
-    document.querySelectorAll('.content-section').forEach(section => {
-        section.classList.add('hidden');
-        section.classList.remove('active'); // Remove active class for styling
-    });
-    // Deactivate all nav buttons
-    navButtons.forEach(button => button.classList.remove('active'));
-
-    // Show the selected section
-    const selectedSection = document.getElementById(`${sectionId}-section`);
-    if (selectedSection) {
-        selectedSection.classList.remove('hidden');
-        selectedSection.classList.add('active'); // Add active class for styling
-    }
-
-    // Activate the corresponding nav button
-    const activeButton = document.querySelector(`.nav-button[onclick*="${sectionId}"]`);
-    if (activeButton) {
-        activeButton.classList.add('active');
-    }
-
-    // Manage polling based on active section
-    if (sectionId === 'web-terminal') {
-        startTerminalPolling();
-    } else {
-        stopTerminalPolling();
-    }
-
-    // Load notepad content if switching to notepad section
-    if (sectionId === 'notepad') {
-        loadNotepadContent();
-    } else if (sectionId === 'recent-commands') {
-        loadRecentCommands(); // Reload recent commands when its tab is opened
-    }
-    // Rclone polling runs independently, as it can be active in background
+/* Base Styles */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
 }
 
-function showRcloneSpinner(message = "Transferring...") {
-    rcloneSpinnerText.textContent = message;
-    rcloneSpinner.classList.remove('hidden');
+/* Color Variables - Default Greenish White Monochromatic */
+:root {
+    /* Default Greenish White Monochromatic (Dark Mode) */
+    --primary-color: #DCE7DC; /* Lighter greenish-white for text */
+    --accent-color: #558B55; /* Muted vibrant green */
+    --bg-color: #1A2A1A; /* Dark background */
+    --card-bg-color: #2D402D; /* Darker card background for contrast */
+    --text-color: #DCE7DC; /* General text color */
+    --border-color: #4A6B4A; /* Darker green border for definition */
+    --input-bg-color: #3C503C; /* Slightly lighter input background */
+    --button-bg-color: #6AA66A; /* Brighter button green */
+    --button-text-color: #1A2A1A; /* Dark text for light buttons */
+    --success-color: #4CAF50;
+    --error-color: #E53935; /* Stronger red for errors */
+    --warning-color: #FFB300; /* Amber for warnings */
+    --info-color: #2196F3; /* Blue for info messages */
+
+    /* RGB values for rgba() colors for transparent overlays */
+    --card-bg-color-rgb: 45, 64, 45;
+    --accent-color-rgb: 85, 139, 85;
+    --primary-color-rgb: 220, 231, 220;
+    --button-bg-color-rgb: 106, 166, 106;
 }
 
-function hideRcloneSpinner() {
-    rcloneSpinner.classList.add('hidden');
+/* Dark Mode (Default) - Explicitly defined for clarity, though it's the root default */
+.dark-mode {
+    --primary-color: #DCE7DC; --accent-color: #558B55; --bg-color: #1A2A1A; --card-bg-color: #2D402D; --text-color: #DCE7DC; --border-color: #4A6B4A; --input-bg-color: #3C503C; --button-bg-color: #6AA66A; --button-text-color: #1A2A1A;
+    --card-bg-color-rgb: 45, 64, 45; --accent-color-rgb: 85, 139, 85; --primary-color-rgb: 220, 231, 220; --button-bg-color-rgb: 106, 166, 106;
 }
 
-function showTerminalSpinner(message = "Executing command...") {
-    terminalSpinnerText.textContent = message;
-    terminalSpinner.classList.remove('hidden');
+/* Additional Themes (Muted and Higher Contrast) */
+.theme-blue {
+    --primary-color: #DDEBF0; --accent-color: #3F8FBD; --bg-color: #1A2C3D; --card-bg-color: #2D4258; --text-color: #DDEBF0; --border-color: #4A6A8C; --input-bg-color: #3C526A; --button-bg-color: #559AC7; --button-text-color: #1A2C3D;
+    --card-bg-color-rgb: 45, 66, 88; --accent-color-rgb: 63, 143, 189; --primary-color-rgb: 221, 235, 240; --button-bg-color-rgb: 85, 154, 199;
+}
+.theme-purple {
+    --primary-color: #E8E0EC; --accent-color: #7A50A0; --bg-color: #2E1A3D; --card-bg-color: #3F2C58; --text-color: #E8E0EC; --border-color: #5A4A7A; --input-bg-color: #4D3C6A; --button-bg-color: #9A7AA6; --button-text-color: #2E1A3D;
+    --card-bg-color-rgb: 63, 44, 88; --accent-color-rgb: 122, 80, 160; --primary-color-rgb: 232, 224, 236; --button-bg-color-rgb: 154, 122, 166;
+}
+.theme-orange {
+    --primary-color: #F5E9DD; --accent-color: #D07B2D; --bg-color: #3D2C1A; --card-bg-color: #58422D; --text-color: #F5E9DD; --border-color: #8C6A4A; --input-bg-color: #6A523C; --button-bg-color: #F0A055; --button-text-color: #3D2C1A;
+    --card-bg-color-rgb: 88, 66, 45; --accent-color-rgb: 208, 123, 45; --primary-color-rgb: 245, 233, 221; --button-bg-color-rgb: 240, 160, 85;
+}
+.theme-red {
+    --primary-color: #F0E3E3; --accent-color: #B04F4F; --bg-color: #3D1A1A; --card-bg-color: #582D2D; --text-color: #F0E3E3; --border-color: #8C4A4A; --input-bg-color: #6A3C3C; --button-bg-color: #E06A6A; --button-text-color: #3D1A1A;
+    --card-bg-color-rgb: 88, 45, 45; --accent-color-rgb: 176, 79, 79; --primary-color-rgb: 240, 227, 227; --button-bg-color-rgb: 224, 106, 106;
+}
+.theme-teal {
+    --primary-color: #E0EFEF; --accent-color: #3F9B9B; --bg-color: #1A3D3D; --card-bg-color: #2D5858; --text-color: #E0EFEF; --border-color: #4A8C8C; --input-bg-color: #3C6A6A; --button-bg-color: #55C7C7; --button-text-color: #1A3D3D;
+    --card-bg-color-rgb: 45, 88, 88; --accent-color-rgb: 63, 155, 155; --primary-color-rgb: 224, 239, 239; --button-bg-color-rgb: 85, 199, 199;
+}
+.theme-indigo {
+    --primary-color: #E3E5F0; --accent-color: #4A5CB0; --bg-color: #1A2D3D; --card-bg-color: #2D4258; --text-color: #E3E5F0; --border-color: #4A6A8C; --input-bg-color: #3C506A; --button-bg-color: #6A7BC0; --button-text-color: #1A2D3D;
+    --card-bg-color-rgb: 45, 66, 88; --accent-color-rgb: 74, 92, 176; --primary-color-rgb: 227, 229, 240; --button-bg-color-rgb: 106, 123, 192;
 }
 
-function hideTerminalSpinner() {
-    terminalSpinner.classList.add('hidden');
+.background-shapes {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;
+    background: linear-gradient(135deg, var(--bg-color), var(--card-bg-color));
 }
 
-// --- Header Scroll Behavior ---
-function handleScroll() {
-    if (window.scrollY > lastScrollY && window.scrollY > headerHeight) { // Scrolling down
-        header.classList.remove('header-visible');
-        header.classList.add('header-hidden');
-    } else { // Scrolling up or at the very top
-        header.classList.remove('header-hidden');
-        header.classList.add('header-visible');
-    }
-    lastScrollY = window.scrollY;
+.shape-1 {
+    position: absolute;
+    top: -10%;
+    left: -10%;
+    width: 40%;
+    height: 40%;
+    background: rgba(var(--accent-color-rgb), 0.15);
+    border-radius: 50%;
+    filter: blur(60px);
+    animation: float1 15s infinite ease-in-out alternate;
+}
+.shape-2 {
+    position: absolute;
+    bottom: -15%;
+    right: -15%;
+    width: 50%;
+    height: 50%;
+    background: rgba(var(--primary-color-rgb), 0.1);
+    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+    filter: blur(70px);
+    animation: float2 20s infinite ease-in-out alternate;
+}
+.shape-3 {
+    position: absolute;
+    top: 20%;
+    right: 5%;
+    width: 25%;
+    height: 25%;
+    background: rgba(var(--button-bg-color-rgb), 0.2);
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    filter: blur(50px);
+    animation: float3 18s infinite ease-in-out alternate;
 }
 
-
-// --- Rclone Mode Logic ---
-function updateModeDescription() {
-    const selectedMode = modeSelect.value;
-    const description = RcloneModeDescriptions[selectedMode] || "No description available.";
-    modeDescription.textContent = description;
-
-    // Warn about destructive modes
-    if (potentiallyDestructiveModes.includes(selectedMode)) {
-        rcloneMajorStepsOutput.innerHTML = `<span class="warning"><i class="fas fa-exclamation-triangle mr-2"></i> WARNING: This mode (${selectedMode}) can lead to data loss! Use with caution.</span>`;
-        rcloneMajorStepsOutput.style.display = 'block';
-    } else {
-        rcloneMajorStepsOutput.style.display = 'none'; // Hide if not destructive
-        rcloneMajorStepsOutput.innerHTML = ''; // Clear content
-    }
+@keyframes float1 {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    100% { transform: translate(20px, 30px) rotate(5deg); }
+}
+@keyframes float2 {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    100% { transform: translate(-30px, -20px) rotate(-8deg); }
+}
+@keyframes float3 {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    100% { transform: translate(10px, -15px) rotate(10deg); }
 }
 
-function toggleRemoteField() {
-    const selectedMode = modeSelect.value;
-
-    // Show/hide source and destination fields based on mode type
-    if (modesTwoRemotes.includes(selectedMode)) {
-        sourceInput.closest('div').classList.remove('hidden'); // Show source field (its parent div)
-        destinationField.classList.remove('hidden'); // Show destination field
-        sourceInput.setAttribute('required', 'true');
-        destinationInput.setAttribute('required', 'true');
-    } else if (modesOneRemote.includes(selectedMode)) {
-        sourceInput.closest('div').classList.remove('hidden'); // Keep source field for "path"
-        destinationField.classList.add('hidden'); // Hide destination field
-        sourceInput.setAttribute('required', 'true'); // Source is required as the "path"
-        destinationInput.removeAttribute('required');
-    } else if (modesNoArgs.includes(selectedMode)) {
-        sourceInput.closest('div').classList.add('hidden'); // Hide source field
-        destinationField.classList.add('hidden'); // Hide destination field
-        sourceInput.removeAttribute('required');
-        destinationInput.removeAttribute('required');
-    }
+/* General Element Styling */
+.card {
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
+}
+.card:hover {
+    transform: translateY(-0.5px);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.25);
 }
 
-
-// --- Generic File Upload ---
-async function uploadFile(fileInput, fileNameDisplay, endpoint, outputElement, successMessage) {
-    const file = fileInput.files[0];
-    if (!file) {
-        logMessage(outputElement, "No file selected.", 'error');
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append(fileInput.name, file); // Use fileInput.name here, which is 'rclone_conf' or 'sa_zip' as defined in HTML
-
-    logMessage(outputElement, `Uploading ${file.name}...`, 'info');
-
-    try {
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            body: formData,
-            // DO NOT set Content-Type header manually when using FormData, browser sets it correctly
-        });
-
-        const result = await response.json();
-        if (result.status === 'success') {
-            logMessage(outputElement, `${successMessage}: ${result.message}`, 'success');
-        } else {
-            logMessage(outputElement, `Upload failed: ${result.message}`, 'error');
-        }
-    } catch (error) {
-        logMessage(outputElement, `Network error during upload: ${error.message}`, 'error');
-    } finally {
-        fileInput.value = ''; // Clear the file input
-        fileNameDisplay.textContent = 'No file chosen'; // Reset file name display
-    }
+.input-field, select.custom-select {
+    background-color: var(--input-bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    transition: all 0.15s ease-in-out;
+}
+.input-field:focus, select.custom-select:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.4);
+    outline: none;
 }
 
-function uploadRcloneConf() {
-    uploadFile(rcloneConfFileInput, rcloneConfFileNameDisplay, '/upload-rclone-conf', majorStepsOutput, 'Rclone config uploaded');
+/* Button Styling */
+.btn-primary, .btn-secondary, .btn-danger {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    transition: all 0.08s ease-in-out;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    border: none;
 }
 
-function uploadSaZip() {
-    uploadFile(saZipFileInput, saZipFileNameDisplay, '/upload-sa-zip', majorStepsOutput, 'Service accounts uploaded');
+.btn-primary {
+    background-color: var(--button-bg-color);
+    color: var(--button-text-color);
+}
+.btn-primary:hover {
+    background-color: var(--accent-color);
+    transform: translateY(-0.5px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+.btn-primary:active {
+    transform: translateY(0.5px);
+    box-shadow: none;
 }
 
-// --- Rclone Transfer Logic ---
-async function startRcloneTransfer() {
-    if (isRcloneProcessRunning) {
-        logMessage(rcloneMajorStepsOutput, "Rclone process is already running. Please stop it first.", 'warning');
-        return;
-    }
-
-    const mode = modeSelect.value;
-    const source = sourceInput.value.trim();
-    const destination = destinationInput.value.trim();
-
-    // Re-validate based on current UI state
-    if (modesTwoRemotes.includes(mode)) {
-        if (!source || !destination) {
-            logMessage(rcloneMajorStepsOutput, "Source and Destination are required for this Rclone mode.", 'error');
-            return;
-        }
-    } else if (modesOneRemote.includes(mode)) {
-         if (!source) { // Corrected: Check for source as the "path"
-            logMessage(rcloneMajorStepsOutput, "Source (path/remote) is required for this Rclone mode.", 'error');
-            return;
-        }
-    } else if (modesNoArgs.includes(mode)) {
-        // No arguments needed, proceed
-    }
-
-
-    rcloneLiveOutput.textContent = ''; // Clear previous output
-    logMessage(rcloneMajorStepsOutput, 'Initializing Rclone transfer...', 'info');
-    showRcloneSpinner();
-    isRcloneProcessRunning = true;
-    startRcloneBtn.classList.add('hidden');
-    stopRcloneBtn.classList.remove('hidden');
-
-    const payload = {
-        mode: mode,
-        source: source,
-        destination: destination,
-        transfers: parseInt(transfersInput.value),
-        checkers: parseInt(checkersInput.value),
-        buffer_size: bufferSizeSelect.value,
-        order: orderSelect.value,
-        loglevel: loglevelSelect.value,
-        additional_flags: additionalFlagsInput.value.trim(),
-        use_drive_trash: useDriveTrashCheckbox.checked,
-        service_account: serviceAccountCheckbox.checked,
-        dry_run: dryRunCheckbox.checked
-    };
-
-    try {
-        const response = await fetch('/execute-rclone', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            logMessage(rcloneMajorStepsOutput, `Error: ${errorData.message}`, 'error');
-            // Ensure buttons are reset on error immediately
-            hideRcloneSpinner();
-            isRcloneProcessRunning = false;
-            startRcloneBtn.classList.remove('hidden');
-            stopRcloneBtn.classList.add('hidden');
-            return;
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder('utf-8');
-        let buffer = '';
-
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-
-            let newlineIndex;
-            while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
-                const line = buffer.substring(0, newlineIndex);
-                buffer = buffer.substring(newlineIndex + 1);
-
-                try {
-                    const data = JSON.parse(line);
-                    if (data.status === 'progress') {
-                        appendOutput(rcloneLiveOutput, data.output);
-                    } else if (data.status === 'complete') {
-                        logMessage(rcloneMajorStepsOutput, data.message, 'success');
-                        appendOutput(rcloneLiveOutput, '\n--- Rclone Command Finished (Success) ---\n');
-                        appendOutput(rcloneLiveOutput, data.output, 'success'); // Display final accumulated output
-                        saveRcloneTransferToHistory(mode, source, destination, 'Success');
-                    } else if (data.status === 'error') {
-                        logMessage(rcloneMajorStepsOutput, `Error: ${data.message}`, 'error');
-                        appendOutput(rcloneLiveOutput, '\n--- Rclone Command Finished (Error) ---\n');
-                        appendOutput(rcloneLiveOutput, data.output, 'error'); // Display final accumulated output
-                        saveRcloneTransferToHistory(mode, source, destination, 'Failed');
-                    } else if (data.status === 'stopped') {
-                        logMessage(rcloneMajorStepsOutput, data.message, 'info');
-                        appendOutput(rcloneLiveOutput, '\n--- Rclone Command Stopped by User ---\n');
-                        saveRcloneTransferToHistory(mode, source, destination, 'Stopped');
-                    }
-                } catch (parseError) {
-                    // console.warn('Could not parse JSON line:', line, parseError);
-                    // This might happen with partial lines, just ignore and wait for more data
-                }
-            }
-        }
-    } catch (error) {
-        logMessage(rcloneMajorStepsOutput, `Network or Rclone execution error: ${error.message}`, 'error');
-        appendOutput(rcloneLiveOutput, `\nError during stream: ${error.message}`, 'error');
-        saveRcloneTransferToHistory(mode, source, destination, 'Failed');
-    } finally {
-        hideRcloneSpinner();
-        isRcloneProcessRunning = false;
-        startRcloneBtn.classList.remove('hidden');
-        stopRcloneBtn.classList.add('hidden');
-        // Ensure any remaining buffer content is processed if it's a complete JSON object
-        if (buffer.trim()) {
-             try {
-                const data = JSON.parse(buffer.trim());
-                 if (data.status === 'complete') {
-                    logMessage(rcloneMajorStepsOutput, data.message, 'success');
-                    appendOutput(rcloneLiveOutput, '\n--- Rclone Command Finished (Success) ---\n');
-                    appendOutput(rcloneLiveOutput, data.output, 'success');
-                    saveRcloneTransferToHistory(mode, source, destination, 'Success');
-                } else if (data.status === 'error') {
-                    logMessage(rcloneMajorStepsOutput, `Error: ${data.message}`, 'error');
-                    appendOutput(rcloneLiveOutput, '\n--- Rclone Command Finished (Error) ---\n');
-                    appendOutput(rcloneLiveOutput, data.output, 'error');
-                    saveRcloneTransferToHistory(mode, source, destination, 'Failed');
-                }
-             } catch (e) {
-                 // Ignore if not a valid JSON object
-             }
-        }
-    }
+.btn-secondary {
+    background-color: var(--input-bg-color);
+    color: var(--primary-color);
+    border: 1px solid var(--border-color);
+}
+.btn-secondary:hover {
+    background-color: var(--border-color);
+    transform: translateY(-0.5px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+.btn-secondary:active {
+    transform: translateY(0.5px);
+    box-shadow: none;
 }
 
-async function stopRcloneTransfer() {
-    if (!isRcloneProcessRunning) {
-        logMessage(rcloneMajorStepsOutput, "No Rclone process is currently running.", 'info');
-        return;
-    }
-
-    logMessage(rcloneMajorStepsOutput, "Sending stop signal to Rclone process...", 'info');
-    try {
-        const response = await fetch('/stop-rclone-process', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        const result = await response.json();
-        if (result.status === 'success') {
-            logMessage(rcloneMajorStepsOutput, result.message, 'success');
-        } else {
-            logMessage(rcloneMajorStepsOutput, `Failed to stop Rclone: ${result.message}`, 'error');
-        }
-    } catch (error) {
-        logMessage(rcloneMajorStepsOutput, `Network error stopping Rclone: ${error.message}`, 'error');
-    }
+.btn-danger {
+    background-color: var(--error-color);
+    color: white;
+}
+.btn-danger:hover {
+    background-color: #C23A3A;
+    transform: translateY(-0.5px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+.btn-danger:active {
+    transform: translateY(0.5px);
+    box-shadow: none;
 }
 
-function appendOutput(element, text, status = 'default') {
-    const span = document.createElement('span');
-    span.textContent = text + '\n';
-    if (status === 'success') span.style.color = 'var(--success-color)';
-    if (status === 'error') span.style.color = 'var(--error-color)';
-    if (status === 'warning') span.style.color = 'var(--warning-color)';
-    if (status === 'info') span.style.color = 'var(--info-color)'; // Added info color
-
-    element.appendChild(span);
-    element.scrollTop = element.scrollHeight; // Auto-scroll to bottom
+/* Navigation Buttons */
+.nav-button {
+    width: 100%;
+    text-align: left;
+    padding: 1rem 1.5rem;
+    border-radius: 0.75rem;
+    background-color: transparent;
+    color: var(--text-color);
+    font-weight: 600;
+    transition: background-color 0.08s, color 0.08s, transform 0.05s;
+    display: flex;
+    align-items: center;
+}
+.nav-button:hover {
+    background-color: var(--input-bg-color);
+    color: var(--accent-color);
+    transform: translateX(1px);
+}
+.nav-button.active {
+    background-color: var(--accent-color);
+    color: var(--button-text-color);
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.3);
+}
+.nav-button.active:hover {
+    background-color: var(--accent-color);
+    color: var(--button-text-color);
+    transform: none;
 }
 
-function logMessage(element, message, type = 'info') {
-    const msgElement = document.createElement('div');
-    msgElement.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-    msgElement.classList.add(type); // Add class for styling
-    element.appendChild(msgElement);
-    element.scrollTop = element.scrollHeight;
+/* Output Areas */
+.output-area {
+    background-color: var(--input-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+    overflow-y: auto;
+    font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--primary-color);
+    max-height: 500px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
 }
 
-// --- Log Download ---
-async function downloadLogs() {
-    try {
-        const response = await fetch('/download-logs');
-        if (response.ok) {
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            // Get filename from Content-Disposition header if available, otherwise default
-            const contentDisposition = response.headers.get('Content-Disposition');
-            const filenameMatch = contentDisposition && contentDisposition.match(/filename="?([^"]+)"?/);
-            a.download = filenameMatch ? filenameMatch[1] : `rclone_webgui_log_${new Date().toISOString().slice(0,10)}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            a.remove();
-            logMessage(rcloneMajorStepsOutput, "Rclone log download initiated.", 'info');
-        } else {
-            const errorData = await response.json();
-            logMessage(rcloneMajorStepsOutput, `Failed to download log: ${errorData.message}`, 'error');
-        }
-    } catch (error) {
-        logMessage(rcloneMajorStepsOutput, `Network error during log download: ${error.message}`, 'error');
-    }
+.major-steps-output {
+    background-color: var(--input-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    font-weight: 500;
+    min-height: 50px;
+    overflow-y: auto;
+    max-height: 150px;
+}
+.major-steps-output .success { color: var(--success-color); }
+.major-steps-output .error { color: var(--error-color); }
+.major-steps-output .warning { color: var(--warning-color); }
+.major-steps-output .info { color: var(--info-color); }
+
+/* Slider Styling (Webkit/Firefox) */
+.slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    background: var(--input-bg-color);
+    outline: none;
+    opacity: 0.9;
+    transition: opacity .15s;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+.slider:hover {
+    opacity: 1;
+}
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    cursor: grab;
+    transition: background-color 0.15s, transform 0.15s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+.slider::-webkit-slider-thumb:hover {
+    background: var(--button-bg-color);
+    transform: scale(1.02);
+}
+.slider::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    transform: scale(0.98);
+}
+.slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    cursor: grab;
+    transition: background-color 0.15s, transform 0.15s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+.slider::-moz-range-thumb:hover {
+    background: var(--button-bg-color);
+    transform: scale(1.02);
+}
+.slider::-moz-range-thumb:active {
+    cursor: grabbing;
+    transform: scale(0.98);
 }
 
-// --- Web Terminal Logic ---
-async function executeTerminalCommand(command = null) {
-    const cmdToExecute = command || terminalCommandInput.value.trim();
-    if (!cmdToExecute) {
-        logMessage(terminalOutput, "Please enter a command.", 'error');
-        return;
-    }
+/* Checkbox Styling */
+.checkbox-container input[type="checkbox"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--accent-color);
+    border-radius: 0.375rem;
+    background-color: var(--input-bg-color);
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease-in-out;
+}
 
-    logMessage(terminalOutput, `Executing: ${cmdToExecute}`, 'info');
-    showTerminalSpinner();
-    terminalOutput.textContent = ''; // Clear previous output
-    isTerminalProcessRunning = true;
-    executeTerminalBtn.classList.add('hidden');
-    stopTerminalBtn.classList.remove('hidden');
+.checkbox-container input[type="checkbox"]:checked {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
 
-    try {
-        const response = await fetch('/execute_terminal_command', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ command: cmdToExecute })
-        });
-        const result = await response.json();
+.checkbox-container input[type="checkbox"]::after {
+    content: '\2713';
+    color: var(--button-text-color);
+    font-size: 14px;
+    display: none;
+}
 
-        if (result.status === 'success') {
-            logMessage(terminalOutput, result.message, 'success');
-            saveCommandToHistory(cmdToExecute); // Save command on successful execution start
-            startTerminalPolling(); // Start polling immediately after command execution starts
-            terminalCommandInput.value = ''; // Clear input field
-        } else if (result.status === 'warning' && result.message.includes("already running")) {
-            // Show confirmation modal
-            terminalConfirmMessage.innerHTML = `A command is currently running: <code class="bg-input-bg-color p-1 rounded-md text-sm">${escapeHtml(result.running_command)}</code>. Do you want to stop it and start a new one?`;
-            terminalConfirmModal.classList.remove('hidden');
-            pendingTerminalCommand = cmdToExecute; // Store the new command
-        } else {
-            logMessage(terminalOutput, `Error: ${result.message}`, 'error');
-            hideTerminalSpinner();
-            isTerminalProcessRunning = false;
-            executeTerminalBtn.classList.remove('hidden');
-            stopTerminalBtn.classList.add('hidden');
-        }
-    } catch (error) {
-        logMessage(terminalOutput, `Network error: ${error.message}`, 'error');
-        hideTerminalSpinner();
-        isTerminalProcessRunning = false;
-        executeTerminalBtn.classList.remove('hidden');
-        stopTerminalBtn.classList.add('hidden');
+.checkbox-container input[type="checkbox"]:checked::after {
+    display: block;
+}
+
+.checkbox-container input[type="checkbox"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.4);
+}
+
+/* Spinner Overlay */
+.spinner-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(var(--card-bg-color-rgb), 0.95);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-radius: 0.75rem;
+    z-index: 10;
+    backdrop-filter: blur(3px);
+}
+
+.spinner {
+    border: 4px solid var(--border-color);
+    border-top: 4px solid var(--accent-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Modals */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.75);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: var(--card-bg-color);
+    padding: 2rem;
+    border-radius: 1rem;
+    max-width: 90%;
+    max-height: 90%;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+}
+
+.close-button {
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    font-size: 2rem;
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--text-color);
+    transition: color 0.2s ease-in-out;
+}
+.close-button:hover {
+    color: var(--error-color);
+}
+
+/* Custom File Upload Styling */
+.custom-file-upload {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    background-color: var(--input-bg-color);
+    color: var(--text-color);
+    padding: 0.5rem;
+    cursor: pointer;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.file-name-display {
+    flex-grow: 1;
+    padding: 0.5rem 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.9rem;
+}
+
+.file-button {
+    flex-shrink: 0;
+    padding: 0.5rem 1rem;
+    border-radius: 0.6rem;
+    margin-left: 0.5rem;
+    font-size: 0.9rem;
+    transition: all 0.1s ease-in-out;
+}
+
+/* Custom Select Styling */
+select.custom-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='var(--primary-color)'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.25rem;
+    padding-right: 2.5rem;
+    color: var(--text-color); /* Ensure text color is inherited */
+}
+
+/* Styles for options within the custom select dropdown */
+select.custom-select option {
+    background-color: var(--input-bg-color); /* Background for all options */
+    color: var(--text-color); /* Text color for all options */
+    padding: 0.5rem 1rem; /* Padding for better spacing */
+    transition: background-color 0.15s ease, color 0.15s ease, font-size 0.15s ease;
+}
+
+/* Alternating background for dropdown options */
+select.custom-select option:nth-child(even) {
+    background-color: var(--card-bg-color); /* Slightly different background for even options */
+}
+
+/* Hover effect for dropdown options */
+select.custom-select option:hover,
+select.custom-select option:checked { /* also apply to selected option for consistency */
+    background-color: var(--accent-color);
+    color: var(--button-text-color);
+    font-size: 1.05em; /* Slightly bigger font on hover/selected */
+}
+
+.app-title {
+    font-family: 'Montserrat', sans-serif; /* Semi-formal font */
+    font-weight: 700;
+    background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 2.5rem; /* Slightly bigger */
+}
+@media (max-width: 768px) {
+    .app-title {
+        font-size: 2rem; /* Adjust title size for mobile */
     }
 }
 
-async function getTerminalOutput() {
-    try {
-        const response = await fetch('/get_terminal_output');
-        const result = await response.json();
-        terminalOutput.textContent = result.output; // Update with full content
-        terminalOutput.scrollTop = terminalOutput.scrollHeight; // Auto-scroll
+/* Header behavior */
+.header-visible {
+    transform: translateY(0);
+    opacity: 1;
+}
+.header-hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+}
+header {
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+    background-color: rgba(var(--card-bg-color-rgb), 0.95); /* Increased opacity */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
 
-        if (!result.is_running && isTerminalProcessRunning) {
-            // Process has finished on the backend
-            logMessage(terminalOutput, "Terminal command finished.", 'info');
-            hideTerminalSpinner();
-            isTerminalProcessRunning = false;
-            executeTerminalBtn.classList.remove('hidden');
-            stopTerminalBtn.classList.add('hidden');
-            stopTerminalPolling(); // Stop polling when command is done
-        }
-    } catch (error) {
-        // Log error but don't stop polling immediately, might be a transient network issue
-        console.error("Error fetching terminal output:", error);
-        // If the backend is truly down, polling will naturally stop as requests fail
+/* For better mobile experience */
+@media (max-width: 768px) {
+    main {
+        flex-direction: column;
+    }
+    aside {
+        width: 100%;
+    }
+    .btn-primary, .btn-danger, .btn-secondary {
+        width: 100%;
+    }
+    .modal-content {
+        padding: 1.5rem;
+    }
+    .custom-file-upload {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0.75rem;
+    }
+    .file-name-display {
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+    .file-button {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 0.5rem;
+    }
+    header .flex-wrap {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    header .space-x-4 {
+        margin-top: 1rem;
+        width: 100%;
+        justify-content: space-between;
     }
 }
-
-async function stopTerminalProcess() {
-    if (!isTerminalProcessRunning) {
-        logMessage(terminalOutput, "No terminal process is currently running.", 'info');
-        return;
-    }
-
-    logMessage(terminalOutput, "Sending stop signal to terminal process...", 'info');
-    try {
-        const response = await fetch('/stop_terminal_process', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        const result = await response.json();
-        if (result.status === 'success') {
-            logMessage(terminalOutput, result.message, 'success');
-            hideTerminalSpinner();
-            isTerminalProcessRunning = false;
-            executeTerminalBtn.classList.remove('hidden');
-            stopTerminalBtn.classList.add('hidden');
-            stopTerminalPolling(); // Stop polling when process is stopped
-        } else {
-            logMessage(terminalOutput, `Failed to stop terminal process: ${result.message}`, 'error');
-        }
-    } catch (error) {
-        logMessage(terminalOutput, `Network error stopping terminal process: ${error.message}`, 'error');
-    }
-}
-
-function clearTerminalOutput() {
-    terminalOutput.textContent = '';
-    logMessage(terminalOutput, "Terminal output cleared.", 'info');
-}
-
-function startTerminalPolling() {
-    if (terminalPollingInterval) {
-        clearInterval(terminalPollingInterval);
-    }
-    terminalPollingInterval = setInterval(getTerminalOutput, 1000); // Poll every 1 second
-}
-
-function stopTerminalPolling() {
-    if (terminalPollingInterval) {
-        clearInterval(terminalPollingInterval);
-        terminalPollingInterval = null;
-    }
-}
-
-
-// --- Recent Commands History ---
-function saveCommandToHistory(command) {
-    let commands = JSON.parse(localStorage.getItem('terminalCommands')) || [];
-    commands.unshift({ command: command, timestamp: new Date().toLocaleString() }); // Add to beginning
-    if (commands.length > 20) { // Keep last 20 commands
-        commands.pop();
-    }
-    localStorage.setItem('terminalCommands', JSON.stringify(commands));
-}
-
-function saveRcloneTransferToHistory(mode, source, destination, status) {
-    let transfers = JSON.parse(localStorage.getItem('rcloneTransfers')) || [];
-    transfers.unshift({
-        mode: mode,
-        source: source,
-        destination: destination,
-        status: status,
-        timestamp: new Date().toLocaleString()
-    });
-    if (transfers.length > 20) { // Keep last 20 transfers
-        transfers.pop();
-    }
-    localStorage.setItem('rcloneTransfers', JSON.stringify(transfers));
-}
-
-
-function loadRecentCommands() {
-    const terminalCommands = JSON.parse(localStorage.getItem('terminalCommands')) || [];
-    const rcloneTransfers = JSON.parse(localStorage.getItem('rcloneTransfers')) || [];
-
-    recentTerminalCommandsDiv.innerHTML = '';
-    if (terminalCommands.length === 0) {
-        recentTerminalCommandsDiv.innerHTML = '<p class="text-text-color">No recent terminal commands.</p>';
-    } else {
-        terminalCommands.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'bg-input-bg-color p-3 rounded-md border border-border-color flex justify-between items-center';
-            div.innerHTML = `
-                <div>
-                    <code class="text-primary-color text-sm">${escapeHtml(item.command)}</code>
-                    <p class="text-xs text-gray-400 mt-1">${item.timestamp}</p>
-                </div>
-                <button class="btn-secondary btn-copy-command px-3 py-1 text-xs" data-command="${escapeHtml(item.command)}">
-                    <i class="fas fa-copy"></i> Copy
-                </button>
-            `;
-            recentTerminalCommandsDiv.appendChild(div);
-        });
-    }
-
-    recentRcloneTransfersDiv.innerHTML = '';
-    if (rcloneTransfers.length === 0) {
-        recentRcloneTransfersDiv.innerHTML = '<p class="text-text-color">No recent Rclone transfers.</p>';
-    } else {
-        rcloneTransfers.forEach(item => {
-            const statusClass = item.status === 'Success' ? 'text-success-color' : (item.status === 'Failed' ? 'text-error-color' : 'text-warning-color');
-            const div = document.createElement('div');
-            div.className = 'bg-input-bg-color p-3 rounded-md border border-border-color space-y-1';
-            div.innerHTML = `
-                <p><span class="font-semibold text-accent-color">${item.mode}:</span> <code class="text-primary-color text-sm">${escapeHtml(item.source)}</code> ${item.destination ? `<i class="fas fa-arrow-right mx-1 text-gray-500"></i> <code class="text-primary-color text-sm">${escapeHtml(item.destination)}</code>` : ''}</p>
-                <p class="text-xs text-gray-400">Status: <span class="${statusClass}">${item.status}</span> | ${item.timestamp}</p>
-                <div class="flex flex-wrap gap-2 mt-2">
-                    <button class="btn-secondary btn-copy-rclone-source px-3 py-1 text-xs" data-source="${escapeHtml(item.source)}"><i class="fas fa-copy"></i> Copy Source</button>
-                    ${item.destination ? `<button class="btn-secondary btn-copy-rclone-destination px-3 py-1 text-xs" data-destination="${escapeHtml(item.destination)}"><i class="fas fa-copy"></i> Copy Destination</button>` : ''}
-                </div>
-            `;
-            recentRcloneTransfersDiv.appendChild(div);
-        });
-    }
-
-    // Add event listeners for copy buttons (must be done after content is loaded)
-    document.querySelectorAll('.btn-copy-command').forEach(button => {
-        button.onclick = (e) => copyToClipboard(e.target.dataset.command || e.target.closest('button').dataset.command);
-    });
-    document.querySelectorAll('.btn-copy-rclone-source').forEach(button => {
-        button.onclick = (e) => copyToClipboard(e.target.dataset.source || e.target.closest('button').dataset.source);
-    });
-    document.querySelectorAll('.btn-copy-rclone-destination').forEach(button => {
-        button.onclick = (e) => copyToClipboard(e.target.dataset.destination || e.target.closest('button').dataset.destination);
-    });
-}
-
-
-function clearAllRecentCommands() {
-    // Replaced confirm with a custom modal if needed, but for simplicity, keeping this as is for now.
-    // In a full production app, this would be a custom modal/dialog.
-    if (window.confirm("Are you sure you want to clear all recent commands and transfers history? This cannot be undone.")) {
-        localStorage.removeItem('terminalCommands');
-        localStorage.removeItem('rcloneTransfers');
-        loadRecentCommands(); // Reload to show empty state
-        logMessage(majorStepsOutput, "All recent commands and transfers history cleared.", 'info');
-    }
-}
-
-// --- Notepad Logic ---
-function saveNotepadContent() {
-    localStorage.setItem('notepadContent', notepadContent.value);
-}
-
-function loadNotepadContent() {
-    notepadContent.value = localStorage.getItem('notepadContent') || '';
-}
-
-// Utility to escape HTML for display
-function escapeHtml(text) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
-}
-
-// --- Clipboard Copy Utility ---
-function copyToClipboard(text) {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    document.body.appendChild(textarea);
-    textarea.select();
-    try {
-        const successful = document.execCommand('copy');
-        // A simple visual feedback for copy
-        const copyFeedback = document.createElement('span');
-        copyFeedback.textContent = successful ? "Copied!" : "Failed to copy!";
-        copyFeedback.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(var(--card-bg-color-rgb), 0.9);
-            color: var(--primary-color);
-            padding: 10px 20px;
-            border-radius: 8px;
-            z-index: 1001;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-        `;
-        document.body.appendChild(copyFeedback);
-        setTimeout(() => {
-            copyFeedback.style.opacity = 1;
-        }, 10); // Small delay to trigger transition
-        setTimeout(() => {
-            copyFeedback.style.opacity = 0;
-            copyFeedback.remove();
-        }, 1500); // Hide after 1.5 seconds
-
-    } catch (err) {
-        logMessage(majorStepsOutput, "Failed to copy to clipboard (unsupported by browser).", 'error');
-    }
-    document.body.removeChild(textarea);
-}
-
-
-// --- Logout ---
-function logout() {
-    window.location.href = '/logout';
-}
-
-// --- Theme Changer ---
-document.addEventListener('DOMContentLoaded', () => {
-    const themeChangerBtn = document.getElementById('themeChangerBtn');
-    const themeDropdown = document.getElementById('themeDropdown');
-
-    // Toggle dropdown visibility
-    themeChangerBtn.addEventListener('click', (event) => {
-        event.stopPropagation(); // Prevent click from bubbling to document and closing immediately
-        themeDropdown.classList.toggle('hidden');
-    });
-
-    // Close dropdown if clicked outside
-    document.addEventListener('click', (event) => {
-        if (!themeDropdown.contains(event.target) && !themeChangerBtn.contains(event.target)) {
-            themeDropdown.classList.add('hidden');
-        }
-    });
-
-    // Apply selected theme
-    themeDropdown.querySelectorAll('a').forEach(link => {
-        link.addEventListener('click', (event) => {
-            event.preventDefault();
-            const theme = event.target.dataset.theme;
-            document.body.className = theme; // Set the class on the body
-            localStorage.setItem('theme', theme); // Save theme preference
-            themeDropdown.classList.add('hidden'); // Hide dropdown after selection
-        });
-    });
-
-    // Load saved theme on initial page load
-    const savedTheme = localStorage.getItem('theme') || 'dark-mode'; // Default to dark-mode
-    document.body.className = savedTheme;
-});
-
-
-// --- Event Listeners ---
-document.addEventListener('DOMContentLoaded', () => {
-    // Initial UI setup
-    showSection('rclone-transfer'); // Show Rclone Transfer section by default
-    updateModeDescription(); // Set initial mode description
-    toggleRemoteField(); // Set initial destination field visibility
-
-    // Header scroll behavior
-    window.addEventListener('scroll', handleScroll);
-
-
-    // Listen for file input changes to display file name
-    rcloneConfFileInput.addEventListener('change', (event) => {
-        rcloneConfFileNameDisplay.textContent = event.target.files[0] ? event.target.files[0].name : 'No file chosen';
-    });
-    saZipFileInput.addEventListener('change', (event) => {
-        saZipFileNameDisplay.textContent = event.target.files[0] ? event.target.files[0].name : 'No file chosen';
-    });
-
-
-    // Rclone Form Events
-    modeSelect.addEventListener('change', () => {
-        updateModeDescription();
-        toggleRemoteField();
-    });
-    transfersInput.addEventListener('input', () => {
-        transfersValueSpan.textContent = transfersInput.value;
-    });
-    checkersInput.addEventListener('input', () => {
-        checkersValueSpan.textContent = checkersInput.value;
-    });
-    startRcloneBtn.addEventListener('click', startRcloneTransfer);
-    stopRcloneBtn.addEventListener('click', stopRcloneTransfer);
-
-    // Terminal Events
-    executeTerminalBtn.addEventListener('click', () => executeTerminalCommand());
-    stopTerminalBtn.addEventListener('click', stopTerminalProcess);
-    terminalCommandInput.addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') {
-            event.preventDefault(); // Prevent default form submission
-            executeTerminalCommand();
-        }
-    });
-
-    confirmStopAndStartBtn.addEventListener('click', async () => {
-        terminalConfirmModal.classList.add('hidden');
-        await stopTerminalProcess(); // Ensure the current process is stopped
-        if (pendingTerminalCommand) {
-            executeTerminalCommand(pendingTerminalCommand); // Execute the new command
-            pendingTerminalCommand = null;
-        }
-    });
-
-    cancelStopAndStartBtn.addEventListener('click', () => {
-        terminalConfirmModal.classList.add('hidden');
-        pendingTerminalCommand = null; // Clear pending command
-        hideTerminalSpinner();
-        isTerminalProcessRunning = false; // Reset state if cancelled
-        executeTerminalBtn.classList.remove('hidden');
-        stopTerminalBtn.classList.add('hidden');
-    });
-
-    // Notepad auto-save
-    notepadContent.addEventListener('input', saveNotepadContent);
-
-    // Close modal on Escape key press
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-            if (!terminalConfirmModal.classList.contains('hidden')) {
-                terminalConfirmModal.classList.add('hidden');
-                pendingTerminalCommand = null; // Clear pending command
-                hideTerminalSpinner();
-                isTerminalProcessRunning = false; // Reset state if cancelled
-                executeTerminalBtn.classList.remove('hidden');
-                stopTerminalBtn.classList.add('hidden');
-            }
-        }
-    });
-
-    // Event listener for Recent Commands tab to load content when clicked
-    document.querySelector('.nav-button[onclick*="recent-commands"]').addEventListener('click', loadRecentCommands);
-});
