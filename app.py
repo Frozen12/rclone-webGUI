@@ -4,13 +4,13 @@ import threading
 import json
 import time
 from datetime import timedelta
-from flask import Flask, render_template, request, jsonify, Response, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, Response, redirect, url_for, session, send_file
 from functools import wraps
 import zipfile
 import shutil
 import re
 
-app = Flask(__name__)
+app = Flask(__nuame__)
 
 # --- Configuration (from Environment Variables for Render.com) ---
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'super-secret-key-please-change-me')
@@ -136,9 +136,9 @@ def index():
 @login_required
 def upload_rclone_conf():
     """Uploads and replaces the rclone.conf file."""
-    if 'rclone_conf' not in request.files:
+    if 'rclone_conf_file_input' not in request.files: # Match the new input ID
         return jsonify({"status": "error", "message": "No file part"}), 400
-    file = request.files['rclone_conf']
+    file = request.files['rclone_conf_file_input'] # Match the new input ID
     if file.filename == '':
         return jsonify({"status": "error", "message": "No selected file"}), 400
     if file:
@@ -153,9 +153,9 @@ def upload_rclone_conf():
 @login_required
 def upload_sa_zip():
     """Uploads and extracts service account JSONs from a ZIP file."""
-    if 'sa_zip' not in request.files:
+    if 'sa_zip_file_input' not in request.files: # Match the new input ID
         return jsonify({"status": "error", "message": "No file part"}), 400
-    file = request.files['sa_zip']
+    file = request.files['sa_zip_file_input'] # Match the new input ID
     if file.filename == '':
         return jsonify({"status": "error", "message": "No selected file"}), 400
     if file and file.filename.endswith('.zip'):
@@ -204,26 +204,24 @@ def execute_rclone():
     use_service_account = data.get('service_account')
     dry_run = data.get('dry_run')
 
-    # Define one-remote and two-remote commands
-    one_remote_modes = [
-        "lsd", "ls", "tree", "listremotes", "mkdir", "size", "serve", "dedupe",
-        "cleanup", "checksum", "delete", "deletefile", "purge", "version"
-    ]
-    two_remote_modes = [
-        "sync", "copy", "move", "copyurl", "check", "cryptcheck"
-    ]
+    # Define modes based on required fields as per latest instructions
+    modes_src_dest = ["sync", "copy", "move", "copyurl", "check", "cryptcheck"]
+    modes_dest_only = ["lsd", "ls", "tree", "mkdir", "size", "serve", "dedupe", "cleanup", "delete", "deletefile", "purge", "checksum"]
+    modes_no_args = ["listremotes", "version"]
 
     cmd = ["rclone", mode]
 
     # Add source and destination based on mode type
-    if mode in two_remote_modes:
+    if mode in modes_src_dest:
         if not source or not destination:
             return jsonify({"status": "error", "message": "Source and Destination are required for this mode."}), 400
         cmd.extend([source, destination])
-    elif mode in one_remote_modes:
-        if not source:
-            return jsonify({"status": "error", "message": "Source is required for this mode."}), 400
-        cmd.append(source)
+    elif mode in modes_dest_only: # Corrected logic: now requires destination only
+        if not destination: # Check for destination instead of source
+            return jsonify({"status": "error", "message": "Destination is required for this mode."}), 400
+        cmd.append(destination) # Append destination
+    elif mode in modes_no_args:
+        pass # No arguments needed
     else:
         return jsonify({"status": "error", "message": f"Unknown Rclone mode: {mode}"}), 400
 
@@ -275,7 +273,7 @@ def execute_rclone():
     rclone_env['RCLONE_DRIVE_TPSLIMIT'] = '3'
     rclone_env['RCLONE_DRIVE_ACKNOWLEDGE_ABUSE'] = 'true'
     rclone_env['RCLONE_LOG_FILE'] = LOG_FILE # This is also redundant with --log-file but harmless
-    rclone_env['RCLONE_VERBOSE'] = '2' # This is generally overridden by --log-level
+    # rclone_env['RCLONE_VERBOSE'] = '2' # Removed as it conflicts with --log-level and --log-level is preferred
     rclone_env['RCLONE_DRIVE_PACER_MIN_SLEEP'] = '50ms'
     rclone_env['RCLONE_DRIVE_PACER_BURST'] = '2'
     rclone_env['RCLONE_SERVER_SIDE_ACROSS_CONFIGS'] = 'true'
@@ -363,11 +361,10 @@ def stop_rclone_process():
 def download_logs():
     """Allows downloading the full Rclone LOG_FILE as an attachment."""
     if os.path.exists(LOG_FILE):
-        return Response(
-            open(LOG_FILE, 'rb').read(),
-            mimetype='text/plain',
-            headers={"Content-Disposition": f"attachment;filename=rclone_webgui_log_{time.strftime('%Y%m%d-%H%M%S')}.txt"}
-        )
+        try:
+            return send_file(LOG_FILE, as_attachment=True, download_name=f"rclone_webgui_log_{time.strftime('%Y%m%d-%H%M%S')}.txt")
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"Failed to serve log file: {e}"}), 500
     return jsonify({"status": "error", "message": "Log file not found."}), 404
 
 # --- Web Terminal Functions ---
