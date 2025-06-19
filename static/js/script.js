@@ -9,7 +9,8 @@ const navButtons = document.querySelectorAll('.nav-button');
 
 const modeSelect = document.getElementById('mode');
 const modeDescription = document.getElementById('mode-description');
-const modeDescriptionInline = document.getElementById('mode-description-inline'); // New inline description
+// const modeDescriptionInline = document.getElementById('mode-description-inline'); // Removed as per request
+const sourceField = document.getElementById('source-field'); // Get the div containing source input
 const sourceInput = document.getElementById('source');
 const destinationField = document.getElementById('destination-field');
 const destinationInput = document.getElementById('destination');
@@ -32,10 +33,10 @@ const rcloneMajorStepsOutput = document.getElementById('rclone-major-steps');
 const rcloneSpinner = document.getElementById('rclone-spinner');
 const rcloneSpinnerText = document.getElementById('rclone-spinner-text');
 
-const rcloneConfFileInput = document.getElementById('rclone_conf_file_input'); // Renamed ID
-const rcloneConfFileNameDisplay = document.getElementById('rclone-conf-file-name'); // New element
-const saZipFileInput = document.getElementById('sa_zip_file_input'); // Renamed ID
-const saZipFileNameDisplay = document.getElementById('sa-zip-file-name'); // New element
+const rcloneConfFileInput = document.getElementById('rclone_conf_file_input');
+const rcloneConfFileNameDisplay = document.getElementById('rclone-conf-file-name');
+const saZipFileInput = document.getElementById('sa_zip_file_input');
+const saZipFileNameDisplay = document.getElementById('sa-zip-file-name');
 const majorStepsOutput = document.getElementById('majorStepsOutput');
 
 const terminalCommandInput = document.getElementById('terminalCommand');
@@ -62,6 +63,12 @@ let isRcloneProcessRunning = false;
 let isTerminalProcessRunning = false;
 let pendingTerminalCommand = null; // Stores command if user confirms stop & start
 
+// For header scroll behavior
+let lastScrollY = 0;
+const header = document.querySelector('header');
+const headerHeight = header.offsetHeight;
+
+
 const RcloneModeDescriptions = {
     "sync": "Make source and destination identical.",
     "copy": "Copy files from source to destination.",
@@ -86,7 +93,7 @@ const RcloneModeDescriptions = {
 };
 
 const modesSrcDest = ["sync", "copy", "move", "copyurl", "check", "cryptcheck"];
-const modesSrcOnly = ["lsd", "ls", "tree", "mkdir", "size", "serve", "dedupe", "cleanup", "delete", "deletefile", "purge", "checksum"]; // Checksum added here
+const modesDestOnly = ["lsd", "ls", "tree", "mkdir", "size", "serve", "dedupe", "cleanup", "delete", "deletefile", "purge", "checksum"];
 const modesNoArgs = ["listremotes", "version"];
 
 const potentiallyDestructiveModes = ["delete", "purge"];
@@ -124,6 +131,8 @@ function showSection(sectionId) {
     // Load notepad content if switching to notepad section
     if (sectionId === 'notepad') {
         loadNotepadContent();
+    } else if (sectionId === 'recent-commands') {
+        loadRecentCommands(); // Reload recent commands when its tab is opened
     }
     // Rclone polling runs independently, as it can be active in background
 }
@@ -146,12 +155,24 @@ function hideTerminalSpinner() {
     terminalSpinner.classList.add('hidden');
 }
 
+// --- Header Scroll Behavior ---
+function handleScroll() {
+    if (window.scrollY > lastScrollY && window.scrollY > headerHeight) { // Scrolling down
+        header.classList.remove('header-visible');
+        header.classList.add('header-hidden');
+    } else { // Scrolling up or at the very top
+        header.classList.remove('header-hidden');
+        header.classList.add('header-visible');
+    }
+    lastScrollY = window.scrollY;
+}
+
+
 // --- Rclone Mode Logic ---
 function updateModeDescription() {
     const selectedMode = modeSelect.value;
     const description = RcloneModeDescriptions[selectedMode] || "No description available.";
     modeDescription.textContent = description;
-    modeDescriptionInline.textContent = description; // Update inline description
 
     // Warn about destructive modes
     if (potentiallyDestructiveModes.includes(selectedMode)) {
@@ -168,17 +189,17 @@ function toggleRemoteField() {
 
     // Show/hide source and destination fields based on mode type
     if (modesSrcDest.includes(selectedMode)) {
-        sourceInput.closest('div').classList.remove('hidden'); // Show source field (its parent div)
+        sourceField.classList.remove('hidden'); // Show source field (its parent div)
         destinationField.classList.remove('hidden'); // Show destination field
         sourceInput.setAttribute('required', 'true');
         destinationInput.setAttribute('required', 'true');
-    } else if (modesSrcOnly.includes(selectedMode)) {
-        sourceInput.closest('div').classList.remove('hidden'); // Show source field
-        destinationField.classList.add('hidden'); // Hide destination field
-        sourceInput.setAttribute('required', 'true');
-        destinationInput.removeAttribute('required');
+    } else if (modesDestOnly.includes(selectedMode)) {
+        sourceField.classList.add('hidden'); // Hide source field
+        destinationField.classList.remove('hidden'); // Show destination field
+        sourceInput.removeAttribute('required');
+        destinationInput.setAttribute('required', 'true');
     } else if (modesNoArgs.includes(selectedMode)) {
-        sourceInput.closest('div').classList.add('hidden'); // Hide source field
+        sourceField.classList.add('hidden'); // Hide source field
         destinationField.classList.add('hidden'); // Hide destination field
         sourceInput.removeAttribute('required');
         destinationInput.removeAttribute('required');
@@ -195,7 +216,7 @@ async function uploadFile(fileInput, fileNameDisplay, endpoint, outputElement, s
     }
 
     const formData = new FormData();
-    formData.append(fileInput.id, file);
+    formData.append(fileInput.name, file); // Use fileInput.name here, not fileInput.id
 
     logMessage(outputElement, `Uploading ${file.name}...`, 'info');
 
@@ -240,13 +261,16 @@ async function startRcloneTransfer() {
     const destination = destinationInput.value.trim();
 
     // Re-validate based on current UI state
-    if (modesSrcDest.includes(mode) && (!source || !destination)) {
-        logMessage(rcloneMajorStepsOutput, "Source and Destination are required for this Rclone mode.", 'error');
-        return;
-    }
-    if (modesSrcOnly.includes(mode) && !source) {
-         logMessage(rcloneMajorStepsOutput, "Source is required for this Rclone mode.", 'error');
-        return;
+    if (modesSrcDest.includes(mode)) {
+        if (!source || !destination) {
+            logMessage(rcloneMajorStepsOutput, "Source and Destination are required for this Rclone mode.", 'error');
+            return;
+        }
+    } else if (modesDestOnly.includes(mode)) {
+         if (!destination) { // Corrected: Check for destination, not source
+            logMessage(rcloneMajorStepsOutput, "Destination is required for this Rclone mode.", 'error');
+            return;
+        }
     }
 
 
@@ -562,7 +586,6 @@ function saveCommandToHistory(command) {
         commands.pop();
     }
     localStorage.setItem('terminalCommands', JSON.stringify(commands));
-    // updateRecentCommandsModalContent(); // No longer a modal, will load when tab is clicked
 }
 
 function saveRcloneTransferToHistory(mode, source, destination, status) {
@@ -578,7 +601,6 @@ function saveRcloneTransferToHistory(mode, source, destination, status) {
         transfers.pop();
     }
     localStorage.setItem('rcloneTransfers', JSON.stringify(transfers));
-    // updateRecentCommandsModalContent(); // No longer a modal, will load when tab is clicked
 }
 
 
@@ -685,7 +707,7 @@ function copyToClipboard(text) {
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background-color: rgba(var(--card-bg-color-rgb, 28, 43, 28), 0.9);
+            background-color: rgba(var(--card-bg-color-rgb), 0.9);
             color: var(--primary-color);
             padding: 10px 20px;
             border-radius: 8px;
@@ -756,6 +778,10 @@ document.addEventListener('DOMContentLoaded', () => {
     updateModeDescription(); // Set initial mode description
     toggleRemoteField(); // Set initial destination field visibility
 
+    // Header scroll behavior
+    window.addEventListener('scroll', handleScroll);
+
+
     // Listen for file input changes to display file name
     rcloneConfFileInput.addEventListener('change', (event) => {
         rcloneConfFileNameDisplay.textContent = event.target.files[0] ? event.target.files[0].name : 'No file chosen';
@@ -809,7 +835,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Notepad auto-save
     notepadContent.addEventListener('input', saveNotepadContent);
-
 
     // Close modal on Escape key press
     document.addEventListener('keydown', (event) => {
