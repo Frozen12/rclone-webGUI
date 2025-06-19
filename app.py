@@ -203,83 +203,144 @@ def execute_rclone():
     use_drive_trash = data.get('use_drive_trash')
     use_service_account = data.get('service_account')
     dry_run = data.get('dry_run')
+    url_field = data.get('url_field', '').strip() # New field for copyurl
+    serve_protocol = data.get('serve_protocol', '').strip() # New field for serve
 
     # Define one-remote and two-remote commands
     one_remote_modes = [
-        "lsd", "ls", "tree", "listremotes", "mkdir", "size", "serve", "dedupe",
-        "cleanup", "checksum", "delete", "deletefile", "purge", "version"
+        "lsd", "ls", "tree", "mkdir", "size", "dedupe",
+        "cleanup", "delete", "deletefile", "purge"
     ]
     two_remote_modes = [
-        "sync", "copy", "move", "copyurl", "check", "cryptcheck"
+        "sync", "copy", "move", "check", "cryptcheck"
     ]
 
     cmd = ["rclone", mode]
 
-    # Add source and destination based on mode type
-    if mode in two_remote_modes:
-        if not source or not destination:
-            return jsonify({"status": "error", "message": "Source and Destination are required for this mode."}), 400
-        cmd.extend([source, destination])
-    elif mode in one_remote_modes:
-        if not source:
-            # For one-remote commands, source is effectively the "path" or "remote"
-            return jsonify({"status": "error", "message": "Source (path/remote) is required for this mode."}), 400
-        cmd.append(source)
-    else:
-        return jsonify({"status": "error", "message": f"Unknown Rclone mode: {mode}"}), 400
-
-    # Add optional flags
-    if transfers:
-        cmd.append(f"--transfers={transfers}")
-    if checkers:
-        cmd.append(f"--checkers={checkers}")
-    if buffer_size:
-        cmd.append(f"--buffer-size={buffer_size}")
-        cmd.append(f"--drive-chunk-size={buffer_size}") # Also apply to drive-chunk-size
-    if order:
-        cmd.append(f"--order-by={order}")
-
-    # Set log level based on dropdown selection
-    loglevel_map = {"ERROR": "ERROR", "Info": "INFO", "DEBUG": "DEBUG"} # Rclone expects these string values
-    cmd.append(f"--log-level={loglevel_map.get(loglevel, 'INFO')}")
-
-    # Add --config flag
-    cmd.append(f"--config={RCLONE_CONFIG_PATH}")
-
-    # Service Account
-    # Check for service accounts directly in BASE_CONFIG_DIR (now SERVICE_ACCOUNT_DIR)
-    if use_service_account and os.path.exists(SERVICE_ACCOUNT_DIR) and any(f.endswith('.json') for f in os.listdir(SERVICE_ACCOUNT_DIR)):
-        cmd.append(f"--drive-service-account-directory={SERVICE_ACCOUNT_DIR}")
-    elif use_service_account and not os.path.exists(SERVICE_ACCOUNT_DIR):
-        return jsonify({"status": "error", "message": "Service account directory does not exist or is empty. Please upload service accounts."}), 400
-
-    # Drive trash
-    if use_drive_trash:
-        cmd.append("--drive-use-trash")
-    else:
-        cmd.append("--drive-skip-gdocs=true") # Default to skip gdocs if trash is off, as a common safe flag
-
-    # Dry run
-    if dry_run:
-        cmd.append("--dry-run")
-
-    # Additional flags from input
-    if additional_flags_str:
-        # Split by space, but handle quoted arguments correctly
-        flags_split = re.findall(r'(?:[^\s"]|"[^"]*")+', additional_flags_str)
-        cmd.extend([flag.strip('"') for flag in flags_split]) # Remove quotes if present
-
     # Environment variables for rclone (as specified by user)
     rclone_env = os.environ.copy()
-    rclone_env['RCLONE_CONFIG'] = RCLONE_CONFIG_PATH # This is redundant with --config but harmless
+    rclone_env['RCLONE_CONFIG'] = RCLONE_CONFIG_PATH
     rclone_env['RCLONE_FAST_LIST'] = 'true'
     rclone_env['RCLONE_DRIVE_TPSLIMIT'] = '3'
     rclone_env['RCLONE_DRIVE_ACKNOWLEDGE_ABUSE'] = 'true'
-    rclone_env['RCLONE_LOG_FILE'] = LOG_FILE # This is also redundant with --log-file but harmless
-    # Removed RCLONE_VERBOSE as it conflicts with --log-level
+    rclone_env['RCLONE_LOG_FILE'] = LOG_FILE
     rclone_env['RCLONE_DRIVE_PACER_MIN_SLEEP'] = '50ms'
     rclone_env['RCLONE_DRIVE_PACER_BURST'] = '2'
     rclone_env['RCLONE_SERVER_SIDE_ACROSS_CONFIGS'] = 'true'
+
+    # Special handling for specific modes that should ignore most other flags
+    if mode == "version":
+        cmd = ["rclone", "version"]
+        cmd.append(f"--config={RCLONE_CONFIG_PATH}")
+    elif mode == "listremotes":
+        cmd = ["rclone", "listremotes"]
+        cmd.append(f"--config={RCLONE_CONFIG_PATH}")
+    elif mode == "copyurl":
+        if not url_field or not destination:
+            return jsonify({"status": "error", "message": "URL and Destination are required for copyurl mode."}), 400
+        cmd.extend([url_field, destination])
+        # Add common flags for copy/move/sync
+        if transfers: cmd.append(f"--transfers={transfers}")
+        if checkers: cmd.append(f"--checkers={checkers}")
+        if buffer_size:
+            cmd.append(f"--buffer-size={buffer_size}")
+            cmd.append(f"--drive-chunk-size={buffer_size}")
+        if dry_run: cmd.append("--dry-run")
+        if additional_flags_str:
+            flags_split = re.findall(r'(?:[^\s"]|"[^"]*")+', additional_flags_str)
+            cmd.extend([flag.strip('"') for flag in flags_split])
+        if use_drive_trash: cmd.append("--drive-use-trash")
+        else: cmd.append("--drive-skip-gdocs=true")
+
+        # Set log level
+        loglevel_map = {"ERROR": "ERROR", "Info": "INFO", "DEBUG": "DEBUG"}
+        cmd.append(f"--log-level={loglevel_map.get(loglevel, 'INFO')}")
+        cmd.append(f"--config={RCLONE_CONFIG_PATH}")
+        # Service Account
+        if use_service_account and os.path.exists(SERVICE_ACCOUNT_DIR) and any(f.endswith('.json') for f in os.listdir(SERVICE_ACCOUNT_DIR)):
+            cmd.append(f"--drive-service-account-directory={SERVICE_ACCOUNT_DIR}")
+    elif mode == "serve":
+        if not serve_protocol or not source:
+            return jsonify({"status": "error", "message": "Protocol and Path to serve are required for serve mode."}), 400
+        cmd.extend([serve_protocol, source])
+        # Add common flags for serve
+        if additional_flags_str:
+            flags_split = re.findall(r'(?:[^\s"]|"[^"]*")+', additional_flags_str)
+            cmd.extend([flag.strip('"') for flag in flags_split])
+
+        # Set log level
+        loglevel_map = {"ERROR": "ERROR", "Info": "INFO", "DEBUG": "DEBUG"}
+        cmd.append(f"--log-level={loglevel_map.get(loglevel, 'INFO')}")
+        cmd.append(f"--config={RCLONE_CONFIG_PATH}")
+        # Service Account
+        if use_service_account and os.path.exists(SERVICE_ACCOUNT_DIR) and any(f.endswith('.json') for f in os.listdir(SERVICE_ACCOUNT_DIR)):
+            cmd.append(f"--drive-service-account-directory={SERVICE_ACCOUNT_DIR}")
+    elif mode in two_remote_modes:
+        if not source or not destination:
+            return jsonify({"status": "error", "message": "Source and Destination are required for this mode."}), 400
+        cmd.extend([source, destination])
+        # Add optional flags
+        if transfers: cmd.append(f"--transfers={transfers}")
+        if checkers: cmd.append(f"--checkers={checkers}")
+        if buffer_size:
+            cmd.append(f"--buffer-size={buffer_size}")
+            cmd.append(f"--drive-chunk-size={buffer_size}")
+        if order: cmd.append(f"--order-by={order}")
+
+        # Set log level
+        loglevel_map = {"ERROR": "ERROR", "Info": "INFO", "DEBUG": "DEBUG"}
+        cmd.append(f"--log-level={loglevel_map.get(loglevel, 'INFO')}")
+        cmd.append(f"--config={RCLONE_CONFIG_PATH}")
+
+        # Service Account
+        if use_service_account and os.path.exists(SERVICE_ACCOUNT_DIR) and any(f.endswith('.json') for f in os.listdir(SERVICE_ACCOUNT_DIR)):
+            cmd.append(f"--drive-service-account-directory={SERVICE_ACCOUNT_DIR}")
+
+        # Drive trash
+        if use_drive_trash: cmd.append("--drive-use-trash")
+        else: cmd.append("--drive-skip-gdocs=true")
+
+        # Dry run
+        if dry_run: cmd.append("--dry-run")
+
+        # Additional flags from input
+        if additional_flags_str:
+            flags_split = re.findall(r'(?:[^\s"]|"[^"]*")+', additional_flags_str)
+            cmd.extend([flag.strip('"') for flag in flags_split])
+    elif mode in one_remote_modes:
+        if not source:
+            return jsonify({"status": "error", "message": "Source (path/remote) is required for this mode."}), 400
+        cmd.append(source)
+        # Add optional flags (relevant for one-remote modes like size, delete, purge)
+        if transfers: cmd.append(f"--transfers={transfers}") # Transfers might be relevant for delete/purge
+        if checkers: cmd.append(f"--checkers={checkers}")
+        if buffer_size: # Buffer size might be relevant for some one-remote operations
+            cmd.append(f"--buffer-size={buffer_size}")
+            cmd.append(f"--drive-chunk-size={buffer_size}")
+        if order: cmd.append(f"--order-by={order}")
+
+        # Set log level
+        loglevel_map = {"ERROR": "ERROR", "Info": "INFO", "DEBUG": "DEBUG"}
+        cmd.append(f"--log-level={loglevel_map.get(loglevel, 'INFO')}")
+        cmd.append(f"--config={RCLONE_CONFIG_PATH}")
+
+        # Service Account
+        if use_service_account and os.path.exists(SERVICE_ACCOUNT_DIR) and any(f.endswith('.json') for f in os.listdir(SERVICE_ACCOUNT_DIR)):
+            cmd.append(f"--drive-service-account-directory={SERVICE_ACCOUNT_DIR}")
+
+        # Drive trash (relevant for delete/purge)
+        if use_drive_trash: cmd.append("--drive-use-trash")
+        else: cmd.append("--drive-skip-gdocs=true")
+
+        # Dry run (relevant for delete/purge)
+        if dry_run: cmd.append("--dry-run")
+
+        # Additional flags from input
+        if additional_flags_str:
+            flags_split = re.findall(r'(?:[^\s"]|"[^"]*")+', additional_flags_str)
+            cmd.extend([flag.strip('"') for flag in flags_split])
+    else:
+        return jsonify({"status": "error", "message": f"Unknown Rclone mode: {mode}"}), 400
 
     # Always include --progress for live updates
     cmd.append("--progress")
@@ -457,6 +518,18 @@ def stop_terminal_process():
             terminal_process = None
             return jsonify({"status": "success", "message": "Terminal process stopped."})
         return jsonify({"status": "info", "message": "No terminal process is currently running."})
+
+@app.route('/download-terminal-log', methods=['GET'])
+@login_required
+def download_terminal_log():
+    """Allows downloading the full terminal LOG_FILE as an attachment."""
+    if os.path.exists(TERMINAL_LOG_FILE):
+        return Response(
+            open(TERMINAL_LOG_FILE, 'rb').read(),
+            mimetype='text/plain',
+            headers={"Content-Disposition": f"attachment;filename=terminal_log_{time.strftime('%Y%m%d-%H%M%S')}.txt"}
+        )
+    return jsonify({"status": "error", "message": "Terminal log file not found."}), 404
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=os.environ.get('PORT', 5000))
