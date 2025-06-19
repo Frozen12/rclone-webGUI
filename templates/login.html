@@ -4,105 +4,127 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Rclone WebGUI</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* Specific styles for the login page to fit the greenish-white theme */
+        /* Base styles for Inter font */
+        body { font-family: 'Inter', sans-serif; }
+
+        /* Custom CSS Variables - aligning with main theme (emerald as base) */
+        :root {
+            --color-primary-bg: #F0FDF4; /* Very light green background */
+            --color-card-bg: #FFFFFF; /* Pure white for main cards */
+            --color-text-primary: #1F2937; /* Dark gray for main text */
+            --color-text-secondary: #4B5563; /* Medium gray for secondary text */
+            --color-accent: #059669; /* Emerald-600 for primary actions */
+            --color-accent-hover: #047857; /* Darker emerald */
+            --color-border-light: #D1FAE5; /* Very light emerald border */
+            --color-input-bg: #F9FAFB; /* Light input background */
+            --color-danger-text: #EF4444; /* Red for error messages */
+
+            /* For focus ring glow effect */
+            --color-accent-rgb-val: 5, 150, 105; /* RGB of emerald-600 */
+        }
+
+        /* Dark Mode overrides */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-image: linear-gradient(to bottom right, #0F172A, #1F2937); /* Dark mode gradient */
+            }
+            :root {
+                --color-primary-bg: #0F172A;
+                --color-card-bg: #1F2937;
+                --color-text-primary: #E2E8F0;
+                --color-text-secondary: #CBD5E1;
+                --color-border-light: #334155;
+                --color-input-bg: #1F2937;
+            }
+        }
+
+        /* Apply background gradient to body */
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--color-background-primary);
+            background-image: linear-gradient(to bottom right, var(--color-primary-bg), #ECFDF5);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Login Card */
+        .login-card {
+            background-color: var(--color-card-bg);
+            border-color: var(--color-border-light);
             color: var(--color-text-primary);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
         }
-        .login-container {
-            background-color: var(--color-background-secondary);
-            border: 1px solid var(--color-border);
-            box-shadow: var(--shadow-medium);
-            padding: 2.5rem;
-            border-radius: 1rem;
-            max-width: 400px;
-            width: 90%;
-            text-align: center;
-        }
-        .login-container h1 {
-            color: var(--color-text-highlight);
-            margin-bottom: 1.5rem;
-            font-size: 1.75rem;
-            font-weight: 700;
-        }
-        .form-group {
-            margin-bottom: 1.25rem;
-            text-align: left;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: var(--color-text-secondary);
-            font-weight: 500;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 0.8rem 1rem;
-            border: 1px solid var(--color-border);
-            border-radius: 0.6rem;
-            background-color: var(--color-input-background);
+
+        /* Input Field styling */
+        .input-field {
+            background-color: var(--color-input-bg);
+            border-color: var(--color-border-light);
             color: var(--color-text-primary);
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
-        .form-group input:focus {
-            border-color: var(--color-accent-hover);
+        .input-field:focus {
+            border-color: var(--color-accent);
+            box-shadow: 0 0 0 4px rgba(var(--color-accent-rgb-val), 0.2);
             outline: none;
-            box-shadow: 0 0 0 3px rgba(165, 243, 209, 0.4); /* Tailwind's emerald-200 equivalent */
         }
-        .login-button {
-            width: 100%;
-            padding: 0.8rem 1.5rem;
+
+        /* Button Primary styling */
+        .button-primary {
             background-color: var(--color-accent);
-            color: white;
-            border: none;
-            border-radius: 0.6rem;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
-            box-shadow: var(--shadow-sm);
         }
-        .login-button:hover {
+        .button-primary:hover {
             background-color: var(--color-accent-hover);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-medium);
         }
-        .login-button:active {
-            transform: translateY(0);
+        .button-primary:active {
+            transform: scale(0.98);
         }
+        .button-primary:focus {
+            box-shadow: 0 0 0 4px rgba(var(--color-accent-rgb-val), 0.2);
+        }
+
+        /* Error Message */
         .error-message {
-            color: #ef4444; /* Tailwind red-500 */
-            margin-top: 1rem;
-            font-size: 0.9rem;
-            font-weight: 500;
+            color: var(--color-danger-text);
         }
     </style>
 </head>
-<body>
-    <div class="login-container">
-        <h1>Rclone WebGUI Login</h1>
-        <form action="{{ url_for('login') }}" method="POST">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="login-card w-full max-w-md p-8 rounded-2xl shadow-xl border">
+        <h2 class="text-3xl font-extrabold text-center mb-8">
+            <i class="fas fa-lock text-emerald-600 mr-2"></i> Admin Login
+        </h2>
+        <form method="POST" action="/login">
+            <div class="mb-6">
+                <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Username</label>
+                <input type="text" id="username" name="username" required
+                       class="input-field block w-full p-3 border rounded-xl shadow-sm
+                              focus:ring-2 focus:ring-offset-2 focus:ring-opacity-50
+                              transition-all duration-200"
+                       placeholder="Enter your username">
             </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
+            <div class="mb-8">
+                <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password</label>
+                <input type="password" id="password" name="password" required
+                       class="input-field block w-full p-3 border rounded-xl shadow-sm
+                              focus:ring-2 focus:ring-offset-2 focus:ring-opacity-50
+                              transition-all duration-200"
+                       placeholder="Enter your password">
             </div>
-            <button type="submit" class="login-button">Login</button>
+
             {% if error %}
-                <p class="error-message">{{ error }}</p>
+                <p class="error-message text-sm text-center mb-6">
+                    <i class="fas fa-exclamation-circle mr-1"></i> {{ error }}
+                </p>
             {% endif %}
+
+            <button type="submit"
+                    class="button-primary w-full py-3 rounded-xl font-semibold text-white
+                           shadow-md transition-all duration-200 transform hover:-translate-y-0.5 active:scale-98
+                           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-opacity-75">
+                <i class="fas fa-sign-in-alt mr-2"></i> Log In
+            </button>
         </form>
     </div>
 </body>
