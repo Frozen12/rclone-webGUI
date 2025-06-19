@@ -5,16 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rclone WebGUI</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
 </head>
 <body class="flex flex-col min-h-screen">
     <!-- Header -->
-    <header class="bg-card-bg-color p-4 shadow-md flex justify-between items-center rounded-b-xl sticky top-0 z-10 border-b border-border-color">
-        <h1 class="text-3xl font-bold text-primary-color">Rclone WebGUI</h1>
-        <div class="flex items-center space-x-4">
+    <header class="bg-card-bg-color p-4 shadow-md flex flex-wrap justify-between items-center rounded-b-xl sticky top-0 z-10 border-b border-border-color">
+        <div class="flex items-center">
+            <svg class="h-8 w-8 text-accent-color mr-3" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v5h-2V7zm0 6h2v2h-2v-2z"/>
+            </svg>
+            <h1 class="text-3xl font-bold app-title">Rclone WebGUI</h1>
+        </div>
+        <div class="flex items-center space-x-4 mt-2 md:mt-0">
             <!-- Theme Changer Dropdown -->
             <div class="relative inline-block text-left">
                 <button type="button" id="themeChangerBtn" class="btn-secondary px-4 py-2 rounded-lg text-sm font-medium focus:outline-none flex items-center">
@@ -22,13 +28,13 @@
                 </button>
                 <div id="themeDropdown" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-card-bg-color ring-1 ring-border-color ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="themeChangerBtn">
                     <div class="py-1" role="none">
-                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color" data-theme="dark-mode">Dark Green (Default)</a>
-                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color" data-theme="theme-blue">Blue</a>
-                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color" data-theme="theme-purple">Purple</a>
-                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color" data-theme="theme-orange">Orange</a>
-                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color" data-theme="theme-red">Red</a>
-                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color" data-theme="theme-teal">Teal</a>
-                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color" data-theme="theme-indigo">Indigo</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="dark-mode">Dark Green (Default)</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-blue">Blue</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-purple">Purple</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-orange">Orange</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-red">Red</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-teal">Teal</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-text-color hover:bg-input-bg-color rounded-md mx-1 my-0.5" data-theme="theme-indigo">Indigo</a>
                     </div>
                 </div>
             </div>
@@ -46,10 +52,11 @@
             <!-- Navigation Buttons -->
             <nav class="card p-4 rounded-xl shadow-md">
                 <ul class="space-y-3">
-                    <li><button onclick="showSection('rclone-transfer')" class="nav-button active"><i class="fas fa-sync-alt mr-2"></i> Rclone Transfer</button></li>
                     <li><button onclick="showSection('setup')" class="nav-button"><i class="fas fa-cog mr-2"></i> Setup</button></li>
+                    <li><button onclick="showSection('rclone-transfer')" class="nav-button active"><i class="fas fa-sync-alt mr-2"></i> Rclone Transfer</button></li>
                     <li><button onclick="showSection('web-terminal')" class="nav-button"><i class="fas fa-terminal mr-2"></i> Web Terminal</button></li>
-                    <li><button onclick="toggleRecentCommandsModal()" class="nav-button"><i class="fas fa-history mr-2"></i> Recent Commands</button></li>
+                    <li><button onclick="showSection('recent-commands')" class="nav-button"><i class="fas fa-history mr-2"></i> Recent Commands</button></li>
+                    <li><button onclick="showSection('notepad')" class="nav-button"><i class="fas fa-clipboard mr-2"></i> Notepad</button></li>
                 </ul>
             </nav>
         </aside>
@@ -57,71 +64,101 @@
         <!-- Right Column: Dynamic Content Sections -->
         <section class="flex-1 space-y-4">
 
+            <!-- Setup Section -->
+            <div id="setup-section" class="content-section card p-6 rounded-xl shadow-md hidden">
+                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-cogs mr-3"></i> Setup</h2>
+
+                <div class="mb-6 border border-border-color rounded-lg p-4">
+                    <h3 class="text-xl font-semibold mb-3 text-accent-color">Upload rclone.conf</h3>
+                    <p class="text-sm text-text-color mb-3">Upload your Rclone configuration file. This will overwrite any existing <code>rclone.conf</code>.</p>
+                    <label class="custom-file-upload">
+                        <input type="file" id="rclone_conf_file_input" accept=".conf" class="hidden">
+                        <span id="rclone-conf-file-name" class="file-name-display">No file chosen</span>
+                        <span class="file-button btn-secondary"><i class="fas fa-folder-open mr-2"></i> Browse</span>
+                    </label>
+                    <button onclick="uploadRcloneConf()" class="btn-primary mt-4 w-full md:w-auto"><i class="fas fa-upload mr-2"></i> Upload rclone.conf</button>
+                </div>
+
+                <div class="mb-6 border border-border-color rounded-lg p-4">
+                    <h3 class="text-xl font-semibold mb-3 text-accent-color">Upload Service Account (SA) ZIP</h3>
+                    <p class="text-sm text-text-color mb-3">Upload a ZIP file containing your service account JSON files. This will clear existing JSONs and extract new ones directly into <code>/app/.config/rclone/</code>.</p>
+                    <label class="custom-file-upload">
+                        <input type="file" id="sa_zip_file_input" accept=".zip" class="hidden">
+                        <span id="sa-zip-file-name" class="file-name-display">No file chosen</span>
+                        <span class="file-button btn-secondary"><i class="fas fa-folder-open mr-2"></i> Browse</span>
+                    </label>
+                    <button onclick="uploadSaZip()" class="btn-primary mt-4 w-full md:w-auto"><i class="fas fa-file-archive mr-2"></i> Upload SA ZIP</button>
+                </div>
+
+                <div id="majorStepsOutput" class="major-steps-output mt-4"></div>
+            </div>
+
             <!-- Rclone Transfer Section -->
             <div id="rclone-transfer-section" class="content-section card p-6 rounded-xl shadow-md active">
                 <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-exchange-alt mr-3"></i> Rclone Transfer</h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
-                        <label for="mode" class="block text-sm font-medium mb-2 text-primary-color">Rclone Mode</label>
-                        <select id="mode" class="input-field w-full p-3 rounded-lg">
-                            <optgroup label="Two Remote Commands">
-                                <option value="sync" data-description="Make source and destination identical." selected>sync</option>
-                                <option value="copy" data-description="Copy files from source to destination.">copy</option>
-                                <option value="move" data-description="Move files from source to destination.">move</option>
-                                <option value="copyurl" data-description="Copy a URL content to destination.">copyurl</option>
-                                <option value="check" data-description="Check files in the source match the files in the destination.">check</option>
-                                <option value="cryptcheck" data-description="Cryptcheck the vault.">cryptcheck</option>
-                            </optgroup>
-                            <optgroup label="One Remote Commands">
-                                <option value="lsd" data-description="List directories/containers in the path.">lsd</option>
-                                <option value="ls" data-description="List all files in the path.">ls</option>
-                                <option value="tree" data-description="List contents of remote in a tree-like fashion.">tree</option>
-                                <option value="listremotes" data-description="List all remotes in the config file.">listremotes</option>
-                                <option value="mkdir" data-description="Create new directory.">mkdir</option>
-                                <option value="size" data-description="Counts objects and their sizes in a remote.">size</option>
-                                <option value="serve" data-description="Serve a remote over HTTP/WebDAV/FTP/etc.">serve</option>
-                                <option value="dedupe" data-description="Remove duplicate files.">dedupe</option>
-                                <option value="cleanup" data-description="Clean up the remote.">cleanup</option>
-                                <option value="checksum" data-description="Check files checksums.">checksum</option>
-                                <option value="delete" data-description="Remove files in the path.">delete</option>
-                                <option value="deletefile" data-description="Remove a single file from remote.">deletefile</option>
-                                <option value="purge" data-description="Remove all content in the path.">purge</option>
-                                <option value="version" data-description="Show version and exit.">version</option>
-                            </optgroup>
+                        <label for="mode" class="block text-sm font-bold mb-2 text-primary-color">Rclone Mode</label>
+                        <select id="mode" class="input-field w-full p-3 rounded-lg custom-select">
+                            <option value="sync" data-description="Make source and destination identical." selected>sync</option>
+                            <option value="copy" data-description="Copy files from source to destination.">copy</option>
+                            <option value="move" data-description="Move files from source to destination.">move</option>
+                            <option value="copyurl" data-description="Copy a URL content to destination.">copyurl</option>
+                            <option value="check" data-description="Check files in the source match the files in the destination.">check</option>
+                            <option value="cryptcheck" data-description="Cryptcheck the vault.">cryptcheck</option>
+
+                            <option value="lsd" data-description="List directories/containers in the path.">lsd</option>
+                            <option value="ls" data-description="List all files in the path.">ls</option>
+                            <option value="tree" data-description="List contents of remote in a tree-like fashion.">tree</option>
+                            <option value="mkdir" data-description="Create new directory.">mkdir</option>
+                            <option value="size" data-description="Counts objects and their sizes in a remote.">size</option>
+                            <option value="serve" data-description="Serve a remote over HTTP/WebDAV/FTP/etc.">serve</option>
+                            <option value="dedupe" data-description="Remove duplicate files.">dedupe</option>
+                            <option value="cleanup" data-description="Clean up the remote.">cleanup</option>
+                            <option value="checksum" data-description="Check files checksums.">checksum</option>
+                            <option value="delete" data-description="Remove files in the path.">delete</option>
+                            <option value="deletefile" data-description="Remove a single file from remote.">deletefile</option>
+                            <option value="purge" data-description="Remove all content in the path.">purge</option>
+
+                            <option value="listremotes" data-description="List all remotes in the config file.">listremotes</option>
+                            <option value="version" data-description="Show version and exit.">version</option>
                         </select>
                         <p id="mode-description" class="text-xs mt-1 text-gray-400">Make source and destination identical.</p>
                     </div>
 
-                    <div>
-                        <label for="source" class="block text-sm font-medium mb-2 text-primary-color">Source Path</label>
+                    <div class="relative">
+                        <label for="source" class="block text-sm font-bold mb-2 text-primary-color">Source Path</label>
+                        <div id="mode-description-inline" class="absolute top-0 right-0 text-xs text-gray-400 p-1 rounded-md max-w-[50%] overflow-hidden whitespace-nowrap text-right"></div>
                         <input type="text" id="source" class="input-field w-full p-3 rounded-lg" value="">
                     </div>
+                </div>
 
+                <div class="mb-6">
                     <div id="destination-field">
-                        <label for="destination" class="block text-sm font-medium mb-2 text-primary-color">Destination Path</label>
+                        <label for="destination" class="block text-sm font-bold mb-2 text-primary-color">Destination Path</label>
                         <input type="text" id="destination" class="input-field w-full p-3 rounded-lg" value="">
                     </div>
+                </div>
 
-                    <div>
-                        <label for="additional_flags" class="block text-sm font-medium mb-2 text-primary-color">Additional Flags</label>
-                        <input type="text" id="additional_flags" class="input-field w-full p-3 rounded-lg" value="--azureblob-env-auth --crypt-pass-bad-blocks">
-                    </div>
+                <div class="mb-6">
+                    <label for="additional_flags" class="block text-sm font-bold mb-2 text-primary-color">Additional Flags</label>
+                    <input type="text" id="additional_flags" class="input-field w-full p-3 rounded-lg" value="--azureblob-env-auth --crypt-pass-bad-blocks">
                 </div>
 
                 <!-- Sliders and Dropdowns -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                     <div>
-                        <label for="transfers" class="block text-sm font-medium mb-2 text-primary-color">Transfers: <span id="transfers-value">2</span></label>
+                        <label for="transfers" class="block text-sm font-bold mb-2 text-primary-color">Transfers: <span id="transfers-value">2</span></label>
                         <input type="range" id="transfers" min="1" max="20" value="2" step="1" class="w-full slider">
                     </div>
                     <div>
-                        <label for="checkers" class="block text-sm font-medium mb-2 text-primary-color">Checkers: <span id="checkers-value">3</span></label>
+                        <label for="checkers" class="block text-sm font-bold mb-2 text-primary-color">Checkers: <span id="checkers-value">3</span></label>
                         <input type="range" id="checkers" min="1" max="20" value="3" step="1" class="w-full slider">
                     </div>
                     <div>
-                        <label for="buffer_size" class="block text-sm font-medium mb-2 text-primary-color">Buffer Size</label>
-                        <select id="buffer_size" class="input-field w-full p-3 rounded-lg">
+                        <label for="buffer_size" class="block text-sm font-bold mb-2 text-primary-color">Buffer Size</label>
+                        <select id="buffer_size" class="input-field w-full p-3 rounded-lg custom-select">
                             <option value="2M">2M</option>
                             <option value="4M">4M</option>
                             <option value="8M">8M</option>
@@ -133,8 +170,8 @@
                         </select>
                     </div>
                     <div>
-                        <label for="order" class="block text-sm font-medium mb-2 text-primary-color">Order By</label>
-                        <select id="order" class="input-field w-full p-3 rounded-lg">
+                        <label for="order" class="block text-sm font-bold mb-2 text-primary-color">Order By</label>
+                        <select id="order" class="input-field w-full p-3 rounded-lg custom-select">
                             <option value="size,ascending">size,ascending</option>
                             <option value="size,descending">size,descending</option>
                             <option value="size,mixed,75">size,mixed,75</option>
@@ -144,8 +181,8 @@
                         </select>
                     </div>
                     <div>
-                        <label for="loglevel" class="block text-sm font-medium mb-2 text-primary-color">Log Level</label>
-                        <select id="loglevel" class="input-field w-full p-3 rounded-lg">
+                        <label for="loglevel" class="block text-sm font-bold mb-2 text-primary-color">Log Level</label>
+                        <select id="loglevel" class="input-field w-full p-3 rounded-lg custom-select">
                             <option value="Info" selected>Info</option>
                             <option value="ERROR">ERROR</option>
                             <option value="DEBUG">DEBUG</option>
@@ -187,33 +224,12 @@
                 <p id="rclone-major-steps" class="major-steps-output mt-4"></p>
             </div>
 
-            <!-- Setup Section -->
-            <div id="setup-section" class="content-section card p-6 rounded-xl shadow-md hidden">
-                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-cogs mr-3"></i> Setup</h2>
-
-                <div class="mb-6 border border-border-color rounded-lg p-4">
-                    <h3 class="text-xl font-semibold mb-3 text-accent-color">Upload rclone.conf</h3>
-                    <p class="text-sm text-text-color mb-3">Upload your Rclone configuration file. This will overwrite any existing <code>rclone.conf</code>.</p>
-                    <input type="file" id="rcloneConfFile" accept=".conf" class="file-input w-full mb-3">
-                    <button onclick="uploadRcloneConf()" class="btn-primary"><i class="fas fa-upload mr-2"></i> Upload rclone.conf</button>
-                </div>
-
-                <div class="mb-6 border border-border-color rounded-lg p-4">
-                    <h3 class="text-xl font-semibold mb-3 text-accent-color">Upload Service Account (SA) ZIP</h3>
-                    <p class="text-sm text-text-color mb-3">Upload a ZIP file containing your service account JSON files. This will clear existing JSONs and extract new ones into <code>/app/.config/rclone/accounts/</code>.</p>
-                    <input type="file" id="saZipFile" accept=".zip" class="file-input w-full mb-3">
-                    <button onclick="uploadSaZip()" class="btn-primary"><i class="fas fa-file-archive mr-2"></i> Upload SA ZIP</button>
-                </div>
-
-                <div id="majorStepsOutput" class="major-steps-output mt-4"></div>
-            </div>
-
             <!-- Web Terminal Section -->
             <div id="web-terminal-section" class="content-section card p-6 rounded-xl shadow-md hidden">
                 <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-terminal mr-3"></i> Web Terminal</h2>
 
                 <div class="mb-4">
-                    <label for="terminalCommand" class="block text-sm font-medium mb-2 text-primary-color">Enter Command</label>
+                    <label for="terminalCommand" class="block text-sm font-bold mb-2 text-primary-color">Enter Command</label>
                     <input type="text" id="terminalCommand" class="input-field w-full p-3 rounded-lg" placeholder="e.g., ls -la /app">
                 </div>
 
@@ -231,35 +247,37 @@
                     <pre id="terminalOutput" class="output-area min-h-[300px]"></pre>
                 </div>
             </div>
+
+            <!-- Recent Commands Section (formerly Modal) -->
+            <div id="recent-commands-section" class="content-section card p-6 rounded-xl shadow-md hidden">
+                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-history mr-3"></i> Recent Commands</h2>
+
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold mb-3 text-accent-color">Rclone Transfers</h3>
+                    <div id="recentRcloneTransfers" class="space-y-3">
+                        <!-- Recent Rclone transfers will be loaded here -->
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 text-accent-color">Web Terminal Commands</h3>
+                    <div id="recentTerminalCommands" class="space-y-3">
+                        <!-- Recent terminal commands will be loaded here -->
+                    </div>
+                </div>
+                <div class="flex justify-end mt-6">
+                    <button onclick="clearAllRecentCommands()" class="btn-danger"><i class="fas fa-trash-alt mr-2"></i> Clear All History</button>
+                </div>
+            </div>
+
+            <!-- Notepad Section -->
+            <div id="notepad-section" class="content-section card p-6 rounded-xl shadow-md hidden">
+                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-clipboard mr-3"></i> Notepad</h2>
+                <textarea id="notepad-content" class="input-field w-full p-4 rounded-lg min-h-[400px]" placeholder="Type or paste your notes here. This content will be saved automatically in your browser."></textarea>
+            </div>
+
         </section>
     </main>
-
-    <!-- Recent Commands Modal -->
-    <div id="recentCommandsModal" class="modal hidden">
-        <div class="modal-content card rounded-xl p-8 shadow-2xl">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-primary-color flex items-center"><i class="fas fa-history mr-3"></i> Recent Commands</h2>
-                <button onclick="toggleRecentCommandsModal()" class="close-button text-xl text-primary-color hover:text-accent-color">&times;</button>
-            </div>
-
-            <div class="mb-6">
-                <h3 class="text-xl font-semibold mb-3 text-accent-color">Rclone Transfers</h3>
-                <div id="recentRcloneTransfers" class="space-y-3">
-                    <!-- Recent Rclone transfers will be loaded here -->
-                </div>
-            </div>
-
-            <div>
-                <h3 class="text-xl font-semibold mb-3 text-accent-color">Web Terminal Commands</h3>
-                <div id="recentTerminalCommands" class="space-y-3">
-                    <!-- Recent terminal commands will be loaded here -->
-                </div>
-            </div>
-             <div class="flex justify-end mt-6">
-                <button onclick="clearAllRecentCommands()" class="btn-danger"><i class="fas fa-trash-alt mr-2"></i> Clear All History</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Confirmation Modal for Terminal Process -->
     <div id="terminalConfirmModal" class="modal hidden">
