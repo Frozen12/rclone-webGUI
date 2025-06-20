@@ -134,15 +134,15 @@
 
         @keyframes float1 {
             0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(20px, 30px) rotate(5px); }
+            100% { transform: translate(20px, 30px) rotate(5deg); }
         }
         @keyframes float2 {
             0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(-30px, -20px) rotate(-8px); }
+            100% { transform: translate(-30px, -20px) rotate(-8deg); }
         }
         @keyframes float3 {
             0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(10px, -15px) rotate(10px); }
+            100% { transform: translate(10px, -15px) rotate(10deg); }
         }
 
         /* Utility to get RGB values from CSS variables for rgba() */
@@ -234,7 +234,7 @@
         // Apply saved theme immediately on page load to prevent flash
         (function() {
             const savedTheme = localStorage.getItem('theme') || 'dark-mode';
-            document.documentElement.className = savedTheme; // Apply to html for global variables
+            document.documentElement.className = savedTheme; // Apply to html or body
             document.body.className = savedTheme; // Apply to body for fallback/compatibility
         })();
     </script>
