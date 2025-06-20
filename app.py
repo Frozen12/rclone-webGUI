@@ -4,7 +4,7 @@ import threading
 import json
 import time
 from datetime import timedelta
-from flask import Flask, render_template, request, jsonify, Response, redirect, url_for, session, send_file
+from flask import Flask, render_template, request, jsonify, Response, redirect, url_for, session
 from functools import wraps
 import zipfile
 import shutil
@@ -13,74 +13,76 @@ import re
 app = Flask(__name__)
 
 # --- Configuration (from Environment Variables for Render.com) ---
-app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'a-very-secure-and-random-secret-key')
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=360)
+app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'super-secret-key-please-change-me')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=360) # Remember user for 6 hours
 
-# --- Directories and Files ---
-# Using /tmp for logs and ephemeral data on services like Render
-BASE_CONFIG_DIR = os.path.join(os.getcwd(), '.config', 'rclone')
+# Directories and Files
+BASE_CONFIG_DIR = '/app/.config/rclone'
+UPLOAD_FOLDER = os.path.join(BASE_CONFIG_DIR, 'uploads')
 RCLONE_CONFIG_PATH = os.path.join(BASE_CONFIG_DIR, 'rclone.conf')
 SERVICE_ACCOUNT_DIR = BASE_CONFIG_DIR
 LOG_FILE = os.path.join('/tmp', 'rcloneLog.txt')
 TERMINAL_LOG_FILE = os.path.join('/tmp', 'terminalLog.txt')
 
-# --- Login Credentials ---
+# Login Credentials
 LOGIN_USERNAME = os.environ.get('LOGIN_USERNAME', 'admin')
 LOGIN_PASSWORD = os.environ.get('LOGIN_PASSWORD', 'password')
 
-# --- Global variables for process management ---
-# Using dictionaries to hold process-related state
-rclone_process_holder = {'process': None}
-terminal_process_holder = {'process': None}
-process_lock = threading.Lock() # A single lock for both processes
+# --- Utility Functions ---
+def write_to_log(filename, content):
+    try:
+        with open(filename, 'a', encoding='utf-8') as f:
+            f.write(content + '\n')
+    except Exception as e:
+        print(f"Error writing to log {filename}: {e}")
+
+def clear_log(filename):
+    try:
+        if os.path.exists(filename):
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.truncate(0)
+    except Exception as e:
+        print(f"Error clearing log {filename}: {e}")
+
+def read_last_n_lines(filename, n):
+    try:
+        if not os.path.exists(filename):
+            return []
+        with open(filename, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+            meaningful_lines = [line.strip() for line in lines if line.strip()]
+            return meaningful_lines[-n:]
+    except Exception as e:
+        print(f"Error reading last {n} lines from {filename}: {e}")
+        return []
 
 # --- Initial Setup ---
-def initial_setup():
-    """Creates necessary directories and clears old logs on startup."""
-    print("Performing initial setup...")
+def create_initial_dirs():
     os.makedirs(BASE_CONFIG_DIR, exist_ok=True)
     clear_log(LOG_FILE)
     clear_log(TERMINAL_LOG_FILE)
-    print("Setup complete.")
+    print(f"Directories created: {BASE_CONFIG_DIR}")
+    print(f"Logs cleared: {LOG_FILE}, {TERMINAL_LOG_FILE}")
 
-# --- Utility Functions ---
-def write_to_log(filename, content):
-    """Appends content to a specified log file."""
-    try:
-        with open(filename, "a", encoding='utf-8') as f:
-            f.write(content + "\\n")
-    except IOError as e:
-        print(f"Error writing to log file {filename}: {e}")
+with app.app_context():
+    create_initial_dirs()
 
-def clear_log(filename):
-    """Clears a specified log file."""
-    if os.path.exists(filename):
-        try:
-            with open(filename, "w", encoding='utf-8') as f:
-                f.truncate()
-            print(f"Cleared log file: {filename}")
-        except IOError as e:
-            print(f"Error clearing log file {filename}: {e}")
+# --- Global Process Management ---
+rclone_process = None
+rclone_lock = threading.Lock()
+stop_rclone_flag = threading.Event()
 
-def read_last_n_lines(filename, n):
-    """Reads the last n non-empty lines from a file."""
-    if not os.path.exists(filename):
-        return []
-    try:
-        with open(filename, 'r', encoding='utf-8') as f:
-            lines = [line for line in f.read().splitlines() if line.strip()]
-        return lines[-n:]
-    except IOError as e:
-        print(f"Error reading from log file {filename}: {e}")
-        return []
+terminal_process = None
+terminal_lock = threading.Lock()
+stop_terminal_flag = threading.Event()
 
 # --- Authentication ---
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'logged_in' not in session:
-            if request.is_json:
-                return jsonify({"status": "error", "message": "Authentication required"}), 401
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+                return jsonify({"status": "error", "message": "Unauthorized. Please log in."}), 401
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -88,17 +90,16 @@ def login_required(f):
 # --- Routes ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    error = None
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+        username = request.form.get('username')
+        password = request.form.get('password')
         if username == LOGIN_USERNAME and password == LOGIN_PASSWORD:
             session['logged_in'] = True
             session.permanent = True
             return redirect(url_for('index'))
         else:
-            error = 'Invalid Credentials. Please try again.'
-    return render_template('login.html', error=error)
+            return render_template('login.html', error="Invalid Credentials. Please try again.")
+    return render_template('login.html')
 
 @app.route('/logout')
 def logout():
@@ -113,253 +114,244 @@ def index():
 @app.route('/upload-rclone-conf', methods=['POST'])
 @login_required
 def upload_rclone_conf():
-    if 'file' not in request.files:
+    if 'rclone_conf' not in request.files:
         return jsonify({"status": "error", "message": "No file part"}), 400
-    file = request.files['file']
+    file = request.files['rclone_conf']
     if file.filename == '':
         return jsonify({"status": "error", "message": "No selected file"}), 400
-    if file:
-        try:
-            file.save(RCLONE_CONFIG_PATH)
-            return jsonify({"status": "success", "message": "rclone.conf uploaded successfully."})
-        except Exception as e:
-            return jsonify({"status": "error", "message": f"Error saving file: {e}"}), 500
-    return jsonify({"status": "error", "message": "File upload failed"}), 500
+    try:
+        file.save(RCLONE_CONFIG_PATH)
+        return jsonify({"status": "success", "message": f"rclone.conf uploaded successfully to {RCLONE_CONFIG_PATH}"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Failed to save rclone.conf: {e}"}), 500
 
 @app.route('/upload-sa-zip', methods=['POST'])
 @login_required
 def upload_sa_zip():
-    if 'file' not in request.files:
+    if 'sa_zip' not in request.files:
         return jsonify({"status": "error", "message": "No file part"}), 400
-    file = request.files['file']
+    file = request.files['sa_zip']
     if file.filename == '' or not file.filename.endswith('.zip'):
-        return jsonify({"status": "error", "message": "Please upload a valid .zip file"}), 400
-
+        return jsonify({"status": "error", "message": "Invalid file. Please upload a .zip file."}), 400
+    
     zip_path = os.path.join(BASE_CONFIG_DIR, 'sa-accounts.zip')
     try:
-        # Clear existing .json files before extracting
-        for item in os.listdir(SERVICE_ACCOUNT_DIR):
-            if item.endswith(".json"):
-                os.remove(os.path.join(SERVICE_ACCOUNT_DIR, item))
-
         file.save(zip_path)
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(SERVICE_ACCOUNT_DIR)
-        os.remove(zip_path) # Clean up the zip file
-        return jsonify({"status": "success", "message": "Service account ZIP extracted successfully."})
-    except zipfile.BadZipFile:
-        return jsonify({"status": "error", "message": "Invalid ZIP file."}), 400
+            for member in zip_ref.infolist():
+                if member.filename.endswith('.json'):
+                    zip_ref.extract(member, SERVICE_ACCOUNT_DIR)
+        os.remove(zip_path)
+        return jsonify({"status": "success", "message": f"Service account ZIP extracted to {SERVICE_ACCOUNT_DIR}."})
     except Exception as e:
-        return jsonify({"status": "error", "message": f"An error occurred: {e}"}), 500
+        return jsonify({"status": "error", "message": f"Failed to process service account ZIP: {e}"}), 500
 
 @app.route('/execute-rclone', methods=['POST'])
 @login_required
 def execute_rclone():
-    with process_lock:
-        if rclone_process_holder['process'] and rclone_process_holder['process'].poll() is None:
-            return jsonify({"status": "error", "message": "An Rclone process is already running."}), 409
+    global rclone_process
+    with rclone_lock:
+        if rclone_process and rclone_process.poll() is None:
+            return jsonify({"status": "error", "message": "Rclone process already running."}), 409
 
-    data = request.json
+    data = request.get_json()
     mode = data.get('mode')
     
-    clear_log(LOG_FILE) # Clear log for new transfer
+    # Base command
+    cmd = ["rclone", mode]
 
-    # Base command structure with environment variables for rclone
-    cmd = ['rclone', mode]
-    
-    # --- Special Mode Handling ---
-    if mode == 'version':
-        cmd = ['rclone', 'version']
-    elif mode == 'listremotes':
-        cmd = ['rclone', 'listremotes', '--config', RCLONE_CONFIG_PATH]
-    else:
-        # Handle source/destination/path based on mode
-        if mode == 'copyurl':
-            cmd.extend([data.get('url', ''), data.get('destination', '')])
-        elif mode == 'serve':
-            cmd.extend([data.get('protocol', 'http'), data.get('path', '')])
-        else: # Standard one or two remote commands
-            source = data.get('source', '')
+    # --- Mode-specific command construction ---
+    if mode == "version":
+        pass # No flags needed
+    elif mode == "listremotes":
+        cmd.append(f"--config={RCLONE_CONFIG_PATH}")
+    elif mode == "copyurl":
+        url = data.get('url', '').strip()
+        destination = data.get('destination', '').strip()
+        if not url or not destination:
+            return jsonify({"status": "error", "message": "URL and Destination are required for copyurl."}), 400
+        cmd.extend([url, destination])
+    elif mode == "serve":
+        protocol = data.get('serve_protocol')
+        path_to_serve = data.get('source', '').strip() # 'source' field is reused for path
+        if not protocol or not path_to_serve:
+             return jsonify({"status": "error", "message": "Protocol and Path to serve are required."}), 400
+        cmd.extend([protocol, path_to_serve])
+    else: # Default handling for other commands
+        source = data.get('source', '').strip()
+        destination = data.get('destination', '').strip()
+        
+        one_remote_modes = ["lsd", "ls", "tree", "mkdir", "size", "dedupe", "cleanup", "delete", "deletefile", "purge"]
+        two_remote_modes = ["sync", "copy", "move", "check", "cryptcheck"]
+
+        if mode in two_remote_modes:
+            if not source or not destination:
+                return jsonify({"status": "error", "message": "Source and Destination are required."}), 400
+            cmd.extend([source, destination])
+        elif mode in one_remote_modes:
+            if not source:
+                return jsonify({"status": "error", "message": "Source (path/remote) is required."}), 400
             cmd.append(source)
-            if data.get('destination'):
-                destination = data.get('destination', '')
-                cmd.append(destination)
+    
+    # --- General Flags (if not a simple command like 'version') ---
+    if mode not in ["version", "listremotes"]:
+        # Append flags from request data
+        flags_map = {
+            'transfers': '--transfers',
+            'checkers': '--checkers',
+            'buffer_size': '--buffer-size',
+            'order': '--order-by'
+        }
+        for key, flag in flags_map.items():
+            if data.get(key):
+                cmd.append(f"{flag}={data.get(key)}")
+        
+        if data.get('buffer_size'):
+            cmd.append(f"--drive-chunk-size={data.get('buffer_size')}")
 
-        # --- Add Flags ---
-        cmd.extend([
-            f"--config={RCLONE_CONFIG_PATH}",
-            f"--log-level={data.get('loglevel', 'INFO')}",
-            f"--transfers={data.get('transfers', 4)}",
-            f"--checkers={data.get('checkers', 8)}",
-            f"--buffer-size={data.get('buffer_size', '16M')}",
-            f"--order-by={data.get('order', 'size,mixed,50')}",
-            "--progress",
-            "--color=NEVER", # Disable color codes for clean parsing
-            "--stats=3s"
-        ])
+        loglevel_map = {"ERROR": "ERROR", "Info": "INFO", "DEBUG": "DEBUG"}
+        cmd.append(f"--log-level={loglevel_map.get(data.get('loglevel'), 'INFO')}")
 
         if data.get('use_drive_trash'):
-            cmd.append('--drive-use-trash')
+            cmd.append("--drive-use-trash")
+        else:
+            cmd.append("--drive-skip-gdocs=true")
+
         if data.get('dry_run'):
-            cmd.append('--dry-run')
-
-        # Add service account directory if requested and JSONs exist
-        sa_files_exist = any(f.endswith('.json') for f in os.listdir(SERVICE_ACCOUNT_DIR))
-        if data.get('service_account') and sa_files_exist:
+            cmd.append("--dry-run")
+        
+        if data.get('service_account') and os.path.exists(SERVICE_ACCOUNT_DIR) and any(f.endswith('.json') for f in os.listdir(SERVICE_ACCOUNT_DIR)):
             cmd.append(f"--drive-service-account-directory={SERVICE_ACCOUNT_DIR}")
+        
+        additional_flags_str = data.get('additional_flags', '').strip()
+        if additional_flags_str:
+            cmd.extend(re.findall(r'(?:[^\s"]|"[^"]*")+', additional_flags_str))
 
-        if data.get('additional_flags'):
-            cmd.extend(data['additional_flags'].split())
+    # Always add config, progress, and stats for most commands
+    if mode != "version":
+        cmd.append(f"--config={RCLONE_CONFIG_PATH}")
+    if mode not in ["version", "listremotes"]:
+        cmd.extend(["--progress", "--stats=3s", "--stats-one-line-date"])
 
-    def generate_output():
+    print(f"Executing Rclone command: {' '.join(cmd)}")
+    clear_log(LOG_FILE)
+
+    def generate_rclone_output():
+        global rclone_process
+        stop_rclone_flag.clear()
         try:
-            # Use Popen to start the process
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', bufsize=1)
-            with process_lock:
-                rclone_process_holder['process'] = process
+            with rclone_lock:
+                rclone_process = subprocess.Popen(
+                    cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                    universal_newlines=True, bufsize=1, env=os.environ.copy()
+                )
+            for line in iter(rclone_process.stdout.readline, ''):
+                if stop_rclone_flag.is_set():
+                    rclone_process.terminate()
+                    yield json.dumps({"status": "stopped", "message": "Rclone process stopped by user."}) + '\n'
+                    break
+                line_stripped = line.strip()
+                if line_stripped:
+                    write_to_log(LOG_FILE, line_stripped)
+                    yield json.dumps({"status": "progress", "output": line_stripped}) + '\n'
+            
+            rclone_process.wait()
+            status = "complete" if rclone_process.returncode == 0 else "error"
+            message = "Rclone command completed successfully." if status == "complete" else f"Rclone command failed with exit code {rclone_process.returncode}."
+            yield json.dumps({"status": status, "message": message, "output": "\n".join(read_last_n_lines(LOG_FILE, 50))}) + '\n'
 
-            # Stream output
-            for line in iter(process.stdout.readline, ''):
-                clean_line = line.strip()
-                write_to_log(LOG_FILE, clean_line)
-                yield f"data: {json.dumps({'status': 'progress', 'output': clean_line})}\n\n"
-            
-            process.wait() # Wait for the process to finish
-            return_code = process.returncode
-            final_status = "complete" if return_code == 0 else "error"
-            final_message = "Rclone process completed successfully." if final_status == "complete" else f"Rclone process finished with errors (code: {return_code})."
-            
-            last_lines = read_last_n_lines(LOG_FILE, 50)
-            
-            # *** FIX: Pre-format the string with newlines to avoid backslash in f-string expression ***
-            output_str = "\n".join(last_lines)
-            payload = {'status': final_status, 'message': final_message, 'output': output_str}
-            yield f"data: {json.dumps(payload)}\n\n"
-
-        except FileNotFoundError:
-            error_msg = "Error: 'rclone' command not found. Ensure Rclone is installed and in your system's PATH."
-            write_to_log(LOG_FILE, error_msg)
-            yield f"data: {json.dumps({'status': 'error', 'message': error_msg, 'output': error_msg})}\n\n"
         except Exception as e:
-            error_msg = f"An unexpected error occurred: {e}"
-            write_to_log(LOG_FILE, error_msg)
-            yield f"data: {json.dumps({'status': 'error', 'message': error_msg, 'output': error_msg})}\n\n"
+            yield json.dumps({"status": "error", "message": f"An error occurred: {e}"}) + '\n'
         finally:
-            with process_lock:
-                rclone_process_holder['process'] = None # Clear process holder
+            with rclone_lock:
+                rclone_process = None
+    return Response(generate_rclone_output(), mimetype='application/json-lines')
 
-    return Response(generate_output(), mimetype='text/event-stream')
-
-@app.route('/stop-rclone', methods=['POST'])
+@app.route('/stop-rclone-process', methods=['POST'])
 @login_required
-def stop_rclone():
-    with process_lock:
-        process = rclone_process_holder.get('process')
-        if process and process.poll() is None:
+def stop_rclone_process():
+    global rclone_process
+    with rclone_lock:
+        if rclone_process and rclone_process.poll() is None:
+            stop_rclone_flag.set()
+            rclone_process.terminate()
             try:
-                process.terminate()
-                process.wait(timeout=5)
-                if process.poll() is None:
-                    process.kill()
-                rclone_process_holder['process'] = None
-                return jsonify({"status": "success", "message": "Rclone process stopped."})
-            except Exception as e:
-                return jsonify({"status": "error", "message": f"Error stopping process: {e}"})
-        return jsonify({"status": "info", "message": "No Rclone process is running."})
-
+                rclone_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                rclone_process.kill()
+            rclone_process = None
+            return jsonify({"status": "success", "message": "Rclone process stopped."})
+    return jsonify({"status": "info", "message": "No Rclone process running."})
 
 @app.route('/download-logs', methods=['GET'])
 @login_required
 def download_logs():
-    """Allows downloading the full Rclone log file."""
-    try:
-        return send_file(LOG_FILE, as_attachment=True, download_name='rclone_log.txt')
-    except FileNotFoundError:
-        return "Rclone log file not found.", 404
-        
-@app.route('/download-terminal-log', methods=['GET'])
-@login_required
-def download_terminal_log():
-    """Allows downloading the full terminal log file."""
-    try:
-        return send_file(TERMINAL_LOG_FILE, as_attachment=True, download_name='terminal_log.txt')
-    except FileNotFoundError:
-        return "Terminal log file not found.", 404
+    if not os.path.exists(LOG_FILE):
+        return jsonify({"status": "error", "message": "Log file not found."}), 404
+    return Response(open(LOG_FILE, 'rb').read(), mimetype='text/plain',
+                    headers={"Content-Disposition": f"attachment;filename=rclone_webgui_log_{time.strftime('%Y%m%d-%H%M%S')}.txt"})
 
-# --- Web Terminal Routes ---
-def stream_terminal_output(process, log_file):
-    """Thread target to stream a process's output to a log file."""
-    try:
-        for line in iter(process.stdout.readline, ''):
-            write_to_log(log_file, line.strip())
-    except Exception as e:
-        print(f"Error in terminal streaming thread: {e}")
-    finally:
-        print("Terminal streaming thread finished.")
+# --- Web Terminal ---
+def _stream_terminal_output(process, stop_flag):
+    for line in iter(process.stdout.readline, ''):
+        if stop_flag.is_set():
+            break
+        write_to_log(TERMINAL_LOG_FILE, line.strip())
+    process.wait()
 
-
-@app.route('/execute-terminal-command', methods=['POST'])
+@app.route('/execute_terminal_command', methods=['POST'])
 @login_required
 def execute_terminal_command():
-    with process_lock:
-        if terminal_process_holder['process'] and terminal_process_holder['process'].poll() is None:
-            # A process is already running. The frontend will handle confirmation.
-            return jsonify({"status": "running", "message": "A terminal process is already running."}), 409
-
-        command = request.json.get('command')
-        if not command:
-            return jsonify({"status": "error", "message": "No command provided."}), 400
-
-        clear_log(TERMINAL_LOG_FILE) # Clear log for new command
-        
+    global terminal_process
+    command = request.get_json().get('command')
+    if not command:
+        return jsonify({"status": "error", "message": "No command provided."}), 400
+    with terminal_lock:
+        if terminal_process and terminal_process.poll() is None:
+            return jsonify({"status": "warning", "message": "A terminal process is already running.", "running_command": terminal_process.args}), 409
+        clear_log(TERMINAL_LOG_FILE)
         try:
-            # Use Popen with shell=True for terminal-like behavior
-            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', bufsize=1)
-            terminal_process_holder['process'] = process
-
-            # Start a thread to read output and write to log
-            thread = threading.Thread(target=stream_terminal_output, args=(process, TERMINAL_LOG_FILE))
-            thread.daemon = True
-            thread.start()
-            
-            return jsonify({"status": "success", "message": "Command execution started."})
+            stop_terminal_flag.clear()
+            terminal_process = subprocess.Popen(
+                command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                universal_newlines=True, bufsize=1
+            )
+            threading.Thread(target=_stream_terminal_output, args=(terminal_process, stop_terminal_flag), daemon=True).start()
+            return jsonify({"status": "success", "message": f"Command '{command}' started."})
         except Exception as e:
-            return jsonify({"status": "error", "message": f"Failed to start command: {e}"}), 500
+            return jsonify({"status": "error", "message": f"Failed to execute command: {e}"}), 500
 
-
-@app.route('/get-terminal-output', methods=['GET'])
+@app.route('/get_terminal_output', methods=['GET'])
 @login_required
 def get_terminal_output():
-    """Returns the most recent terminal output from the log file."""
-    with process_lock:
-        process = terminal_process_holder.get('process')
-        is_running = process and process.poll() is None
-    
-    output_lines = read_last_n_lines(TERMINAL_LOG_FILE, 100)
-    return jsonify({"status": "success", "output": "\\n".join(output_lines), "is_running": is_running})
+    with terminal_lock:
+        is_running = terminal_process and terminal_process.poll() is None
+        output_lines = read_last_n_lines(TERMINAL_LOG_FILE, 100)
+        return jsonify({"status": "success", "output": "\n".join(output_lines), "is_running": is_running})
 
-
-@app.route('/stop-terminal-process', methods=['POST'])
+@app.route('/stop_terminal_process', methods=['POST'])
 @login_required
 def stop_terminal_process():
-    """Terminates any active terminal process."""
-    with process_lock:
-        process = terminal_process_holder.get('process')
-        if process and process.poll() is None:
+    global terminal_process
+    with terminal_lock:
+        if terminal_process and terminal_process.poll() is None:
+            stop_terminal_flag.set()
+            terminal_process.terminate()
             try:
-                process.terminate()
-                process.wait(timeout=5)
-                if process.poll() is None:
-                    process.kill()
-                terminal_process_holder['process'] = None
-                return jsonify({"status": "success", "message": "Terminal process stopped."})
-            except Exception as e:
-                return jsonify({"status": "error", "message": f"Failed to stop process: {e}"})
-        return jsonify({"status": "info", "message": "No terminal process is currently running."})
+                terminal_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                terminal_process.kill()
+            terminal_process = None
+            return jsonify({"status": "success", "message": "Terminal process stopped."})
+    return jsonify({"status": "info", "message": "No terminal process running."})
 
+@app.route('/download-terminal-logs', methods=['GET'])
+@login_required
+def download_terminal_logs():
+    if not os.path.exists(TERMINAL_LOG_FILE):
+        return jsonify({"status": "error", "message": "Terminal log file not found."}), 404
+    return Response(open(TERMINAL_LOG_FILE, 'rb').read(), mimetype='text/plain',
+                    headers={"Content-Disposition": f"attachment;filename=terminal_log_{time.strftime('%Y%m%d-%H%M%S')}.txt"})
 
 if __name__ == '__main__':
-    initial_setup()
-    # For local dev, use Flask's server. For production, Gunicorn is used via Dockerfile.
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(debug=True, host='0.0.0.0', port=os.environ.get('PORT', 5000))
