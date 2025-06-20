@@ -10,14 +10,6 @@
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
-    <script>
-        // Apply saved theme immediately on page load to prevent flash
-        (function() {
-            const savedTheme = localStorage.getItem('theme') || 'dark-mode';
-            document.documentElement.className = savedTheme; // Apply to html for global variables
-            document.body.className = savedTheme; // Apply to body for fallback/compatibility
-        })();
-    </script>
 </head>
 <body class="flex flex-col min-h-screen">
     <!-- Header -->
@@ -32,7 +24,6 @@
             <h1 class="text-3xl font-bold app-title">Rclone WebGUI</h1>
         </div>
         <div class="flex items-center space-x-4 mt-2 md:mt-0 ml-auto"> <!-- Added ml-auto to push to right -->
-            <span id="user-id-display" class="text-xs text-text-color mr-2"></span> <!-- User ID display -->
             <!-- Theme Changer Dropdown -->
             <div class="relative inline-block text-left">
                 <button type="button" id="themeChangerBtn" class="btn-secondary px-4 py-2 rounded-lg text-sm font-medium focus:outline-none flex items-center">
@@ -108,10 +99,7 @@
 
             <!-- Rclone Transfer Section -->
             <div id="rclone-transfer-section" class="content-section card p-6 rounded-xl shadow-md active">
-                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center">
-                    <i class="fas fa-exchange-alt mr-3"></i> Rclone Transfer
-                    <div id="rclone-spinner" class="section-title-spinner"></div> <!-- Spinner moved here -->
-                </h2>
+                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-exchange-alt mr-3"></i> Rclone Transfer</h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
@@ -235,12 +223,16 @@
                 <div class="flex flex-wrap gap-4 justify-center mb-6">
                     <button id="start-rclone-btn" class="btn-primary w-full md:w-auto flex-1"><i class="fas fa-play mr-2"></i> Start Rclone Transfer</button>
                     <button id="stop-rclone-btn" class="btn-danger w-full md:w-auto flex-1 hidden"><i class="fas fa-stop mr-2"></i> Stop Rclone Transfer</button>
-                    <button onclick="downloadRcloneLogs()" class="btn-secondary w-full md:w-auto flex-1"><i class="fas fa-download mr-2"></i> Download Rclone Log</button>
+                    <button onclick="downloadLogs()" class="btn-secondary w-full md:w-auto flex-1"><i class="fas fa-download mr-2"></i> Download Rclone Log</button>
                     <button onclick="clearRcloneOutput()" class="btn-secondary w-full md:w-auto flex-1"><i class="fas fa-eraser mr-2"></i> Clear Output</button> <!-- New Clear Output button -->
                 </div>
 
                 <!-- Rclone Live Output -->
                 <div class="relative">
+                    <div id="rclone-spinner" class="spinner-overlay hidden">
+                        <div class="spinner"></div>
+                        <p class="mt-3 text-primary-color text-lg font-medium" id="rclone-spinner-text">Transferring...</p>
+                    </div>
                     <pre id="rcloneLiveOutput" class="output-area min-h-[200px]"></pre>
                 </div>
                 <p id="rclone-major-steps" class="major-steps-output mt-4"></p>
@@ -248,10 +240,7 @@
 
             <!-- Web Terminal Section -->
             <div id="web-terminal-section" class="content-section card p-6 rounded-xl shadow-md hidden">
-                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center">
-                    <i class="fas fa-terminal mr-3"></i> Web Terminal
-                    <div id="terminal-spinner" class="section-title-spinner"></div> <!-- Spinner moved here -->
-                </h2>
+                <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-terminal mr-3"></i> Web Terminal</h2>
 
                 <div class="mb-4">
                     <label for="terminalCommand" class="block text-sm font-bold mb-2 text-primary-color">Enter Command</label>
@@ -266,6 +255,10 @@
                 </div>
 
                 <div class="relative">
+                    <div id="terminal-spinner" class="spinner-overlay hidden">
+                        <div class="spinner"></div>
+                        <p class="mt-3 text-primary-color text-lg font-medium" id="terminal-spinner-text">Executing command...</p>
+                    </div>
                     <pre id="terminalOutput" class="output-area min-h-[300px]"></pre>
                 </div>
             </div>
@@ -295,7 +288,7 @@
             <!-- Notepad Section -->
             <div id="notepad-section" class="content-section card p-6 rounded-xl shadow-md hidden">
                 <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center"><i class="fas fa-clipboard mr-3"></i> Notepad</h2>
-                <textarea id="notepad-content" class="input-field w-full p-4 rounded-lg min-h-[400px]" placeholder="Type or paste your notes here. This content will be saved automatically in the cloud."></textarea>
+                <textarea id="notepad-content" class="input-field w-full p-4 rounded-lg min-h-[400px]" placeholder="Type or paste your notes here. This content will be saved automatically in your browser."></textarea>
             </div>
 
         </section>
