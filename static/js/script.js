@@ -32,8 +32,10 @@ const startRcloneBtn = document.getElementById('start-rclone-btn');
 const stopRcloneBtn = document.getElementById('stop-rclone-btn');
 const rcloneLiveOutput = document.getElementById('rcloneLiveOutput');
 const rcloneMajorStepsOutput = document.getElementById('rclone-major-steps');
-const rcloneSpinner = document.getElementById('rclone-spinner');
-const rcloneSpinnerText = document.getElementById('rclone-spinner-text');
+const rcloneSpinner = document.getElementById('rclone-spinner'); // Spinner overlay
+const rcloneSpinnerText = document.getElementById('rclone-spinner-text'); // Text for spinner overlay
+const rcloneHeaderSpinner = document.getElementById('rclone-header-spinner'); // Spinner next to tab heading
+const rcloneHeaderSpinnerTxt = document.getElementById('rclone-header-spinner-text'); // Text for spinner next to tab heading
 
 const rcloneConfFileInput = document.getElementById('rclone_conf_file_input');
 const rcloneConfFileNameDisplay = document.getElementById('rclone-conf-file-name');
@@ -45,8 +47,11 @@ const terminalCommandInput = document.getElementById('terminalCommand');
 const executeTerminalBtn = document.getElementById('execute-terminal-btn');
 const stopTerminalBtn = document.getElementById('stop-terminal-btn');
 const terminalOutput = document.getElementById('terminalOutput');
-const terminalSpinner = document.getElementById('terminal-spinner');
-const terminalSpinnerText = document.getElementById('terminal-spinner-text');
+const terminalSpinner = document.getElementById('terminal-spinner'); // Spinner overlay
+const terminalSpinnerText = document.getElementById('terminal-spinner-text'); // Text for spinner overlay
+const terminalHeaderSpinner = document.getElementById('terminal-header-spinner'); // Spinner next to tab heading
+const terminalHeaderSpinnerTxt = document.getElementById('terminal-header-spinner-text'); // Text for spinner next to tab heading
+
 const terminalConfirmModal = document.getElementById('terminalConfirmModal');
 const terminalConfirmMessage = document.getElementById('terminalConfirmMessage');
 const confirmStopAndStartBtn = document.getElementById('confirmStopAndStartBtn');
@@ -59,8 +64,8 @@ const notepadContent = document.getElementById('notepad-content');
 
 
 // --- Global State Variables ---
-let rclonePollingInterval = null;
-let terminalPollingInterval = null;
+let rclonePollingInterval = null; // No longer needed for Rclone, streaming now
+let terminalPollingInterval = null; // Still needed for terminal polling
 let isRcloneProcessRunning = false;
 let isTerminalProcessRunning = false;
 let pendingTerminalCommand = null; // Stores command if user confirms stop & start
@@ -87,7 +92,6 @@ const RcloneModeDescriptions = {
     "serve": "Serve a remote over HTTP/WebDAV/FTP/etc.",
     "dedupe": "Remove duplicate files.",
     "cleanup": "Clean up the remote.",
-    // "checksum": "Check files checksums.", // Removed as per request
     "delete": "Remove files in the path.",
     "deletefile": "Remove a single file from remote.",
     "purge": "Remove all content in the path.",
@@ -147,21 +151,29 @@ function showSection(sectionId) {
 }
 
 function showRcloneSpinner(message = "Transferring...") {
-    rcloneSpinnerText.textContent = message;
-    rcloneSpinner.classList.remove('hidden');
+    rcloneSpinnerText.textContent = message; // Overlay spinner text
+    rcloneSpinner.classList.remove('hidden'); // Overlay spinner
+
+    rcloneHeaderSpinnerTxt.textContent = message; // Header spinner text
+    rcloneHeaderSpinner.classList.remove('hidden'); // Header spinner
 }
 
 function hideRcloneSpinner() {
-    rcloneSpinner.classList.add('hidden');
+    rcloneSpinner.classList.add('hidden'); // Overlay spinner
+    rcloneHeaderSpinner.classList.add('hidden'); // Header spinner
 }
 
 function showTerminalSpinner(message = "Executing command...") {
-    terminalSpinnerText.textContent = message;
-    terminalSpinner.classList.remove('hidden');
+    terminalSpinnerText.textContent = message; // Overlay spinner text
+    terminalSpinner.classList.remove('hidden'); // Overlay spinner
+
+    terminalHeaderSpinnerTxt.textContent = message; // Header spinner text
+    terminalHeaderSpinner.classList.remove('hidden'); // Header spinner
 }
 
 function hideTerminalSpinner() {
-    terminalSpinner.classList.add('hidden');
+    terminalSpinner.classList.add('hidden'); // Overlay spinner
+    terminalHeaderSpinner.classList.add('hidden'); // Header spinner
 }
 
 // --- Header Scroll Behavior ---
@@ -349,7 +361,7 @@ async function startRcloneTransfer() {
         use_drive_trash: useDriveTrashCheckbox.checked,
         service_account: serviceAccountCheckbox.checked,
         dry_run: dryRunCheckbox.checked,
-        serve_protocol: serveProtocol // Include serve protocol in payload
+        serve_protocol: serveProtocol
     };
 
     try {
@@ -394,21 +406,24 @@ async function startRcloneTransfer() {
                     } else if (data.status === 'complete') {
                         logMessage(rcloneMajorStepsOutput, data.message, 'success');
                         appendOutput(rcloneLiveOutput, '\n--- Rclone Command Finished (Success) ---\n');
-                        appendOutput(rcloneLiveOutput, data.output, 'success'); // Display final accumulated output
+                        rcloneLiveOutput.textContent = data.output; // Display full accumulated output
+                        appendOutput(rcloneLiveOutput, '', 'no-newline'); // Ensure scroll to bottom with last append
                         saveRcloneTransferToHistory(mode, source, destination, 'Success');
                     } else if (data.status === 'error') {
                         logMessage(rcloneMajorStepsOutput, `Error: ${data.message}`, 'error');
                         appendOutput(rcloneLiveOutput, '\n--- Rclone Command Finished (Error) ---\n');
-                        appendOutput(rcloneLiveOutput, data.output, 'error'); // Display final accumulated output
+                        rcloneLiveOutput.textContent = data.output; // Display full accumulated output
+                        appendOutput(rcloneLiveOutput, '', 'no-newline'); // Ensure scroll to bottom with last append
                         saveRcloneTransferToHistory(mode, source, destination, 'Failed');
                     } else if (data.status === 'stopped') {
                         logMessage(rcloneMajorStepsOutput, data.message, 'info');
                         appendOutput(rcloneLiveOutput, '\n--- Rclone Command Stopped by User ---\n');
+                        appendOutput(rcloneLiveOutput, data.output, 'info'); // Display final accumulated output
                         saveRcloneTransferToHistory(mode, source, destination, 'Stopped');
                     }
                 } catch (parseError) {
                     // console.warn('Could not parse JSON line:', line, parseError);
-                    // This might happen with partial lines, just ignore and wait for more data
+                    // This might happen with partial lines or non-JSON data, just ignore and wait for more data
                 }
             }
         }
@@ -421,20 +436,27 @@ async function startRcloneTransfer() {
         isRcloneProcessRunning = false;
         startRcloneBtn.classList.remove('hidden');
         stopRcloneBtn.classList.add('hidden');
-        // Ensure any remaining buffer content is processed if it's a complete JSON object
+        // Process any remaining buffer content as the final message
         if (buffer.trim()) {
              try {
                 const data = JSON.parse(buffer.trim());
-                 if (data.status === 'complete') {
+                if (data.status === 'complete') {
                     logMessage(rcloneMajorStepsOutput, data.message, 'success');
                     appendOutput(rcloneLiveOutput, '\n--- Rclone Command Finished (Success) ---\n');
-                    appendOutput(rcloneLiveOutput, data.output, 'success');
+                    rcloneLiveOutput.textContent = data.output;
+                    appendOutput(rcloneLiveOutput, '', 'no-newline');
                     saveRcloneTransferToHistory(mode, source, destination, 'Success');
                 } else if (data.status === 'error') {
                     logMessage(rcloneMajorStepsOutput, `Error: ${data.message}`, 'error');
                     appendOutput(rcloneLiveOutput, '\n--- Rclone Command Finished (Error) ---\n');
-                    appendOutput(rcloneLiveOutput, data.output, 'error');
+                    rcloneLiveOutput.textContent = data.output;
+                    appendOutput(rcloneLiveOutput, '', 'no-newline');
                     saveRcloneTransferToHistory(mode, source, destination, 'Failed');
+                } else if (data.status === 'stopped') {
+                    logMessage(rcloneMajorStepsOutput, data.message, 'info');
+                    appendOutput(rcloneLiveOutput, '\n--- Rclone Command Stopped by User ---\n');
+                    appendOutput(rcloneLiveOutput, data.output, 'info');
+                    saveRcloneTransferToHistory(mode, source, destination, 'Stopped');
                 }
              } catch (e) {
                  // Ignore if not a valid JSON object
@@ -467,21 +489,33 @@ async function stopRcloneTransfer() {
 }
 
 function appendOutput(element, text, status = 'default') {
-    const span = document.createElement('span');
-    span.textContent = text + '\n';
-    if (status === 'success') span.style.color = 'var(--success-color)';
-    if (status === 'error') span.style.color = 'var(--error-color)';
-    if (status === 'warning') span.style.color = 'var(--warning-color)';
-    if (status === 'info') span.style.color = 'var(--info-color)'; // Added info color
-
-    element.appendChild(span);
+    // Append directly to textContent for performance, only add newline if needed
+    if (status === 'no-newline') { // Special case for last line to ensure scroll
+        element.scrollTop = element.scrollHeight;
+        return;
+    }
+    const coloredText = getColoredText(text, status);
+    element.innerHTML += coloredText + '\n';
     element.scrollTop = element.scrollHeight; // Auto-scroll to bottom
 }
 
+function getColoredText(text, status) {
+    let color = '';
+    if (status === 'success') color = 'var(--success-color)';
+    if (status === 'error') color = 'var(--error-color)';
+    if (status === 'warning') color = 'var(--warning-color)';
+    if (status === 'info') color = 'var(--info-color)';
+    if (color) {
+        return `<span style="color: ${color}">${escapeHtml(text)}</span>`;
+    }
+    return escapeHtml(text);
+}
+
+
 function logMessage(element, message, type = 'info') {
     const msgElement = document.createElement('div');
-    msgElement.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-    msgElement.classList.add(type); // Add class for styling
+    const timestamp = new Date().toLocaleTimeString();
+    msgElement.innerHTML = `<span class="${type}">[${timestamp}] ${escapeHtml(message)}</span>`; // Use innerHTML to allow for styling via span
     element.appendChild(msgElement);
     element.scrollTop = element.scrollHeight;
 }
@@ -490,13 +524,13 @@ function clearRcloneOutput() {
     rcloneLiveOutput.textContent = '';
     rcloneMajorStepsOutput.innerHTML = '';
     rcloneMajorStepsOutput.style.display = 'none';
-    logMessage(majorStepsOutput, "Rclone output cleared.", 'info');
+    logMessage(rcloneMajorStepsOutput, "Rclone output cleared.", 'info'); // Log to major steps output
 }
 
 // --- Log Download ---
 async function downloadLogs() {
     try {
-        const response = await fetch('/download-rclone-log'); // Renamed endpoint for clarity
+        const response = await fetch('/download-rclone-log');
         if (response.ok) {
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
@@ -575,7 +609,7 @@ async function executeTerminalCommand(command = null) {
             logMessage(terminalOutput, result.message, 'success');
             saveCommandToHistory(cmdToExecute); // Save command on successful execution start
             startTerminalPolling(); // Start polling immediately after command execution starts
-            terminalCommandInput.value = ''; // Clear input field
+            // terminalCommandInput.value = ''; // DO NOT CLEAR INPUT FIELD
         } else if (result.status === 'warning' && result.message.includes("already running")) {
             // Show confirmation modal
             terminalConfirmMessage.innerHTML = `A command is currently running: <code class="bg-input-bg-color p-1 rounded-md text-sm">${escapeHtml(result.running_command)}</code>. Do you want to stop it and start a new one?`;
@@ -917,7 +951,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    cancelStopAndStartBtn.addEventListener('click', () => {
+    cancelStopAndAndStartBtn.addEventListener('click', () => {
         terminalConfirmModal.classList.add('hidden');
         pendingTerminalCommand = null; // Clear pending command
         hideTerminalSpinner();
