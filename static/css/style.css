@@ -378,28 +378,45 @@ body {
 /* Spinner Overlay */
 .spinner-overlay {
     position: absolute;
-    top: 0;
+    top: 0; /* Position at the top of the parent relative container */
     left: 0;
     right: 0;
-    bottom: 0;
-    background-color: rgba(var(--card-bg-color-rgb), 0.95);
+    height: 60px; /* Smaller height, covers only the top part for message/spinner */
+    background-color: rgba(var(--card-bg-color-rgb), 0.7); /* More transparent */
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     border-radius: 0.75rem;
     z-index: 10;
-    backdrop-filter: blur(3px);
+    backdrop-filter: blur(2px); /* Slightly less blur */
+    color: var(--primary-color);
+    font-weight: 500;
+    /* Position the spinner relative to its parent section, not the output area */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    max-width: 300px; /* Limit width */
+    height: 100px; /* Adjust height */
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    pointer-events: none; /* Allow interaction with elements behind it */
 }
 
-.spinner {
-    border: 4px solid var(--border-color);
-    border-top: 4px solid var(--accent-color);
+/* Spinner directly next to the title (within the h2 flex container) */
+.section-title-spinner {
+    margin-left: 1rem;
+    border: 3px solid var(--border-color);
+    border-top: 3px solid var(--accent-color);
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
+    width: 20px;
+    height: 20px;
     animation: spin 1s linear infinite;
+    display: none; /* Hidden by default */
 }
+
 
 @keyframes spin {
     0% { transform: rotate(0deg); }
@@ -540,6 +557,12 @@ header {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
+/* Theme Dropdown Opacity */
+#themeDropdown {
+    background-color: rgba(var(--card-bg-color-rgb), 0.75); /* 75% opacity */
+}
+
+
 /* For better mobile experience */
 @media (max-width: 768px) {
     main {
@@ -575,26 +598,18 @@ header {
     header .space-x-4 {
         margin-top: 1rem;
         width: 100%;
-        justify-content: space-between;
+        justify-content: flex-end; /* Align to the right */
+        align-items: center; /* Vertically center items */
+        flex-direction: row; /* Ensure buttons stay in a row */
     }
     /* Mobile specific adjustments for logout and theme buttons */
-    header .btn-danger { /* Logout button */
+    header .btn-danger,
+    header .btn-secondary { /* Logout button and Theme button */
         padding: 0.5rem 1rem; /* Smaller padding */
         font-size: 0.8rem; /* Smaller font size */
         width: auto; /* Allow content to dictate width */
     }
-    header .btn-secondary { /* Theme button */
-        padding: 0.5rem 1rem; /* Smaller padding */
-        font-size: 0.8rem; /* Smaller font size */
-        width: auto; /* Allow content to dictate width */
-    }
-    header .items-center { /* Container for theme and logout buttons */
-        display: flex;
-        flex-direction: row; /* Keep them in a row */
-        justify-content: flex-end; /* Align to the right */
-        width: 100%;
-        margin-top: 1rem; /* Add some margin from the title */
-    }
+
     header .app-title {
         font-size: 2.5rem; /* Relatively larger on mobile header */
         text-align: left;
@@ -602,6 +617,35 @@ header {
     }
     header > div:first-child { /* The div containing the SVG and app title */
         width: 100%; /* Take full width on mobile */
-        justify-content: center; /* Center the title */
+        justify-content: space-between; /* Space out title and right-aligned buttons */
+        align-items: center;
+        flex-direction: row; /* Ensure title and buttons are in a row */
+    }
+    header .flex.items-center { /* Contains title and SVG */
+        width: auto; /* Allow content to dictate width */
+    }
+
+    /* Adjust the main header flex container to wrap and align items correctly */
+    header {
+        flex-direction: row; /* Keep header content in a row initially */
+        justify-content: space-between; /* Push items to ends */
+        align-items: center; /* Vertically align items */
+    }
+    /* For smaller screens, allow wrapping and adjust alignment */
+    @media (max-width: 768px) {
+        header {
+            flex-direction: column; /* Stack vertically on small screens */
+            align-items: flex-start; /* Align stacked items to the start */
+        }
+        header .flex.items-center:first-child { /* App title and SVG */
+            width: 100%;
+            justify-content: flex-start; /* Align title to left */
+            margin-bottom: 0.5rem; /* Space below title */
+        }
+        header .space-x-4 { /* Theme and Logout buttons */
+            width: 100%;
+            justify-content: flex-end; /* Keep buttons to the right */
+            margin-top: 0; /* Remove top margin as they are part of new row */
+        }
     }
 }
