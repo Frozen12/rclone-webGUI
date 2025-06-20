@@ -234,7 +234,7 @@
         // Apply saved theme immediately on page load to prevent flash
         (function() {
             const savedTheme = localStorage.getItem('theme') || 'dark-mode';
-            document.documentElement.className = savedTheme; // Apply to html or body
+            document.documentElement.className = savedTheme; // Apply to html for global variables
             document.body.className = savedTheme; // Apply to body for fallback/compatibility
         })();
     </script>
