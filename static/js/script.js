@@ -1,3 +1,61 @@
+// Firebase configuration and initialization (will be provided by the environment)
+// global __app_id and __firebase_config are available in the Canvas environment
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+
+// Initialize Firebase only if config is available
+let app;
+let auth;
+let db;
+let userId = 'anonymous'; // Default to anonymous
+
+if (Object.keys(firebaseConfig).length > 0) {
+    app = firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+
+    // Authenticate user
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            userId = user.uid;
+            console.log("Firebase authenticated, user ID:", userId);
+            document.getElementById('user-id-display').textContent = `User ID: ${userId.substring(0, 8)}...`;
+            // Load data after authentication
+            loadRecentCommands();
+            loadNotepadContent();
+        } else {
+            // Attempt to sign in with custom token if available, otherwise anonymously
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                try {
+                    await auth.signInWithCustomToken(__initial_auth_token);
+                    console.log("Signed in with custom token.");
+                } catch (error) {
+                    console.error("Error signing in with custom token:", error);
+                    // Fallback to anonymous if custom token fails
+                    try {
+                        await auth.signInAnonymously();
+                        console.log("Signed in anonymously after custom token failure.");
+                    } catch (anonError) {
+                        console.error("Error signing in anonymously:", anonError);
+                    }
+                }
+            } else {
+                try {
+                    await auth.signInAnonymously();
+                    console.log("Signed in anonymously.");
+                } catch (error) {
+                    console.error("Error signing in anonymously:", error);
+                }
+            }
+        }
+    });
+} else {
+    console.warn("Firebase configuration not found. Data persistence will not work.");
+    // Display a placeholder for user ID if Firebase is not configured
+    document.getElementById('user-id-display').textContent = 'User ID: N/A (No Firebase)';
+}
+
+
 // --- DOM Element References ---
 const setupSection = document.getElementById('setup-section');
 const rcloneTransferSection = document.getElementById('rclone-transfer-section');
@@ -32,8 +90,7 @@ const startRcloneBtn = document.getElementById('start-rclone-btn');
 const stopRcloneBtn = document.getElementById('stop-rclone-btn');
 const rcloneLiveOutput = document.getElementById('rcloneLiveOutput');
 const rcloneMajorStepsOutput = document.getElementById('rclone-major-steps');
-const rcloneSpinner = document.getElementById('rclone-spinner');
-const rcloneSpinnerText = document.getElementById('rclone-spinner-text');
+const rcloneSpinner = document.getElementById('rclone-spinner'); // Spinner beside title
 
 const rcloneConfFileInput = document.getElementById('rclone_conf_file_input');
 const rcloneConfFileNameDisplay = document.getElementById('rclone-conf-file-name');
@@ -45,8 +102,7 @@ const terminalCommandInput = document.getElementById('terminalCommand');
 const executeTerminalBtn = document.getElementById('execute-terminal-btn');
 const stopTerminalBtn = document.getElementById('stop-terminal-btn');
 const terminalOutput = document.getElementById('terminalOutput');
-const terminalSpinner = document.getElementById('terminal-spinner');
-const terminalSpinnerText = document.getElementById('terminal-spinner-text');
+const terminalSpinner = document.getElementById('terminal-spinner'); // Spinner beside title
 const terminalConfirmModal = document.getElementById('terminalConfirmModal');
 const terminalConfirmMessage = document.getElementById('terminalConfirmMessage');
 const confirmStopAndStartBtn = document.getElementById('confirmStopAndStartBtn');
@@ -146,8 +202,7 @@ function showSection(sectionId) {
     // Rclone polling runs independently, as it can be active in background
 }
 
-function showRcloneSpinner(message = "Transferring...") {
-    rcloneSpinnerText.textContent = message;
+function showRcloneSpinner() {
     rcloneSpinner.classList.remove('hidden');
 }
 
@@ -155,8 +210,7 @@ function hideRcloneSpinner() {
     rcloneSpinner.classList.add('hidden');
 }
 
-function showTerminalSpinner(message = "Executing command...") {
-    terminalSpinnerText.textContent = message;
+function showTerminalSpinner() {
     terminalSpinner.classList.remove('hidden');
 }
 
@@ -331,7 +385,7 @@ async function startRcloneTransfer() {
 
     rcloneLiveOutput.textContent = ''; // Clear previous output
     logMessage(rcloneMajorStepsOutput, 'Initializing Rclone transfer...', 'info');
-    showRcloneSpinner();
+    showRcloneSpinner(); // Show spinner next to title
     isRcloneProcessRunning = true;
     startRcloneBtn.classList.add('hidden');
     stopRcloneBtn.classList.remove('hidden');
@@ -394,12 +448,18 @@ async function startRcloneTransfer() {
                     } else if (data.status === 'complete') {
                         logMessage(rcloneMajorStepsOutput, data.message, 'success');
                         appendOutput(rcloneLiveOutput, '\n--- Rclone Command Finished (Success) ---\n');
-                        appendOutput(rcloneLiveOutput, data.output, 'success'); // Display final accumulated output
+                        // For version/listremotes, data.output might contain the full output already
+                        if (data.output) {
+                             appendOutput(rcloneLiveOutput, data.output, 'success');
+                        }
                         saveRcloneTransferToHistory(mode, source, destination, 'Success');
                     } else if (data.status === 'error') {
                         logMessage(rcloneMajorStepsOutput, `Error: ${data.message}`, 'error');
                         appendOutput(rcloneLiveOutput, '\n--- Rclone Command Finished (Error) ---\n');
-                        appendOutput(rcloneLiveOutput, data.output, 'error'); // Display final accumulated output
+                        // For version/listremotes, data.output might contain the full output already
+                        if (data.output) {
+                            appendOutput(rcloneLiveOutput, data.output, 'error');
+                        }
                         saveRcloneTransferToHistory(mode, source, destination, 'Failed');
                     } else if (data.status === 'stopped') {
                         logMessage(rcloneMajorStepsOutput, data.message, 'info');
@@ -407,8 +467,8 @@ async function startRcloneTransfer() {
                         saveRcloneTransferToHistory(mode, source, destination, 'Stopped');
                     }
                 } catch (parseError) {
-                    // console.warn('Could not parse JSON line:', line, parseError);
-                    // This might happen with partial lines, just ignore and wait for more data
+                    // This might happen with partial lines, just append as raw text if not valid JSON
+                    appendOutput(rcloneLiveOutput, line);
                 }
             }
         }
@@ -428,16 +488,17 @@ async function startRcloneTransfer() {
                  if (data.status === 'complete') {
                     logMessage(rcloneMajorStepsOutput, data.message, 'success');
                     appendOutput(rcloneLiveOutput, '\n--- Rclone Command Finished (Success) ---\n');
-                    appendOutput(rcloneLiveOutput, data.output, 'success');
+                    if (data.output) appendOutput(rcloneLiveOutput, data.output, 'success');
                     saveRcloneTransferToHistory(mode, source, destination, 'Success');
                 } else if (data.status === 'error') {
                     logMessage(rcloneMajorStepsOutput, `Error: ${data.message}`, 'error');
                     appendOutput(rcloneLiveOutput, '\n--- Rclone Command Finished (Error) ---\n');
-                    appendOutput(rcloneLiveOutput, data.output, 'error');
+                    if (data.output) appendOutput(rcloneLiveOutput, data.output, 'error');
                     saveRcloneTransferToHistory(mode, source, destination, 'Failed');
                 }
              } catch (e) {
-                 // Ignore if not a valid JSON object
+                 // If not a valid JSON object, it's just a raw text line.
+                 appendOutput(rcloneLiveOutput, buffer.trim());
              }
         }
     }
@@ -557,7 +618,7 @@ async function executeTerminalCommand(command = null) {
     }
 
     logMessage(terminalOutput, `Executing: ${cmdToExecute}`, 'info');
-    showTerminalSpinner();
+    showTerminalSpinner(); // Show spinner next to title
     terminalOutput.textContent = ''; // Clear previous output
     isTerminalProcessRunning = true;
     executeTerminalBtn.classList.add('hidden');
@@ -575,7 +636,7 @@ async function executeTerminalCommand(command = null) {
             logMessage(terminalOutput, result.message, 'success');
             saveCommandToHistory(cmdToExecute); // Save command on successful execution start
             startTerminalPolling(); // Start polling immediately after command execution starts
-            terminalCommandInput.value = ''; // Clear input field
+            // terminalCommandInput.value = ''; // Don't clear input field
         } else if (result.status === 'warning' && result.message.includes("already running")) {
             // Show confirmation modal
             terminalConfirmMessage.innerHTML = `A command is currently running: <code class="bg-input-bg-color p-1 rounded-md text-sm">${escapeHtml(result.running_command)}</code>. Do you want to stop it and start a new one?`;
@@ -668,108 +729,220 @@ function stopTerminalPolling() {
 }
 
 
-// --- Recent Commands History ---
-function saveCommandToHistory(command) {
-    let commands = JSON.parse(localStorage.getItem('terminalCommands')) || [];
-    commands.unshift({ command: command, timestamp: new Date().toLocaleString() }); // Add to beginning
-    if (commands.length > 20) { // Keep last 20 commands
-        commands.pop();
+// --- Recent Commands History (Firestore) ---
+async function saveCommandToHistory(command) {
+    if (!db || !userId || userId === 'anonymous') {
+        console.warn("Firestore not ready or user not authenticated. Cannot save command history.");
+        return;
     }
-    localStorage.setItem('terminalCommands', JSON.stringify(commands));
+    try {
+        await db.collection(`artifacts/${appId}/users/${userId}/recentCommands`).add({
+            type: 'terminal',
+            command: command,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp() // Use server timestamp
+        });
+        console.log("Terminal command saved to Firestore.");
+    } catch (error) {
+        console.error("Error saving terminal command to Firestore:", error);
+    }
 }
 
-function saveRcloneTransferToHistory(mode, source, destination, status) {
-    let transfers = JSON.parse(localStorage.getItem('rcloneTransfers')) || [];
-    transfers.unshift({
-        mode: mode,
-        source: source,
-        destination: destination,
-        status: status,
-        timestamp: new Date().toLocaleString()
-    });
-    if (transfers.length > 20) { // Keep last 20 transfers
-        transfers.pop();
+async function saveRcloneTransferToHistory(mode, source, destination, status) {
+    if (!db || !userId || userId === 'anonymous') {
+        console.warn("Firestore not ready or user not authenticated. Cannot save Rclone history.");
+        return;
     }
-    localStorage.setItem('rcloneTransfers', JSON.stringify(transfers));
+    try {
+        await db.collection(`artifacts/${appId}/users/${userId}/recentCommands`).add({
+            type: 'rclone',
+            mode: mode,
+            source: source,
+            destination: destination,
+            status: status,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log("Rclone transfer saved to Firestore.");
+    } catch (error) {
+        console.error("Error saving Rclone transfer to Firestore:", error);
+    }
 }
 
 
-function loadRecentCommands() {
-    const terminalCommands = JSON.parse(localStorage.getItem('terminalCommands')) || [];
-    const rcloneTransfers = JSON.parse(localStorage.getItem('rcloneTransfers')) || [];
+async function loadRecentCommands() {
+    if (!db || !userId || userId === 'anonymous') {
+        recentTerminalCommandsDiv.innerHTML = '<p class="text-text-color">Not authenticated. Recent commands not loaded.</p>';
+        recentRcloneTransfersDiv.innerHTML = '<p class="text-text-color">Not authenticated. Recent transfers not loaded.</p>';
+        return;
+    }
 
+    // Clear existing displays
     recentTerminalCommandsDiv.innerHTML = '';
-    if (terminalCommands.length === 0) {
-        recentTerminalCommandsDiv.innerHTML = '<p class="text-text-color">No recent terminal commands.</p>';
-    } else {
-        terminalCommands.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'bg-input-bg-color p-3 rounded-md border border-border-color flex justify-between items-center';
-            div.innerHTML = `
-                <div>
-                    <code class="text-primary-color text-sm">${escapeHtml(item.command)}</code>
-                    <p class="text-xs text-gray-400 mt-1">${item.timestamp}</p>
-                </div>
-                <button class="btn-secondary btn-copy-command px-3 py-1 text-xs" data-command="${escapeHtml(item.command)}">
-                    <i class="fas fa-copy"></i> Copy
-                </button>
-            `;
-            recentTerminalCommandsDiv.appendChild(div);
-        });
-    }
-
     recentRcloneTransfersDiv.innerHTML = '';
-    if (rcloneTransfers.length === 0) {
-        recentRcloneTransfersDiv.innerHTML = '<p class="text-text-color">No recent Rclone transfers.</p>';
-    } else {
-        rcloneTransfers.forEach(item => {
-            const statusClass = item.status === 'Success' ? 'text-success-color' : (item.status === 'Failed' ? 'text-error-color' : 'text-warning-color');
-            const div = document.createElement('div');
-            div.className = 'bg-input-bg-color p-3 rounded-md border border-border-color space-y-1';
-            div.innerHTML = `
-                <p><span class="font-semibold text-accent-color">${item.mode}:</span> <code class="text-primary-color text-sm">${escapeHtml(item.source)}</code> ${item.destination ? `<i class="fas fa-arrow-right mx-1 text-gray-500"></i> <code class="text-primary-color text-sm">${escapeHtml(item.destination)}</code>` : ''}</p>
-                <p class="text-xs text-gray-400">Status: <span class="${statusClass}">${item.status}</span> | ${item.timestamp}</p>
-                <div class="flex flex-wrap gap-2 mt-2">
-                    <button class="btn-secondary btn-copy-rclone-source px-3 py-1 text-xs" data-source="${escapeHtml(item.source)}"><i class="fas fa-copy"></i> Copy Source</button>
-                    ${item.destination ? `<button class="btn-secondary btn-copy-rclone-destination px-3 py-1 text-xs" data-destination="${escapeHtml(item.destination)}"><i class="fas fa-copy"></i> Copy Destination</button>` : ''}
-                </div>
-            `;
-            recentRcloneTransfersDiv.appendChild(div);
-        });
-    }
 
-    // Add event listeners for copy buttons (must be done after content is loaded)
-    document.querySelectorAll('.btn-copy-command').forEach(button => {
-        button.onclick = (e) => copyToClipboard(e.target.dataset.command || e.target.closest('button').dataset.command);
-    });
-    document.querySelectorAll('.btn-copy-rclone-source').forEach(button => {
-        button.onclick = (e) => copyToClipboard(e.target.dataset.source || e.target.closest('button').dataset.source);
-    });
-    document.querySelectorAll('.btn-copy-rclone-destination').forEach(button => {
-        button.onclick = (e) => copyToClipboard(e.target.dataset.destination || e.target.closest('button').dataset.destination);
-    });
+    try {
+        // Listen for real-time updates for recent commands
+        db.collection(`artifacts/${appId}/users/${userId}/recentCommands`)
+            .orderBy('timestamp', 'desc') // Order by timestamp, newest first
+            .limit(20) // Limit to last 20
+            .onSnapshot(snapshot => {
+                const terminalCommands = [];
+                const rcloneTransfers = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.type === 'terminal') {
+                        terminalCommands.push(data);
+                    } else if (data.type === 'rclone') {
+                        rcloneTransfers.push(data);
+                    }
+                });
+
+                // Render terminal commands
+                recentTerminalCommandsDiv.innerHTML = '';
+                if (terminalCommands.length === 0) {
+                    recentTerminalCommandsDiv.innerHTML = '<p class="text-text-color">No recent terminal commands.</p>';
+                } else {
+                    terminalCommands.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'bg-input-bg-color p-3 rounded-md border border-border-color flex justify-between items-center';
+                        div.innerHTML = `
+                            <div>
+                                <code class="text-primary-color text-sm">${escapeHtml(item.command)}</code>
+                                <p class="text-xs text-gray-400 mt-1">${item.timestamp ? new Date(item.timestamp.toDate()).toLocaleString() : 'N/A'}</p>
+                            </div>
+                            <button class="btn-secondary btn-copy-command px-3 py-1 text-xs" data-command="${escapeHtml(item.command)}">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        `;
+                        recentTerminalCommandsDiv.appendChild(div);
+                    });
+                }
+
+                // Render Rclone transfers
+                recentRcloneTransfersDiv.innerHTML = '';
+                if (rcloneTransfers.length === 0) {
+                    recentRcloneTransfersDiv.innerHTML = '<p class="text-text-color">No recent Rclone transfers.</p>';
+                } else {
+                    rcloneTransfers.forEach(item => {
+                        const statusClass = item.status === 'Success' ? 'text-success-color' : (item.status === 'Failed' ? 'text-error-color' : 'text-warning-color');
+                        const div = document.createElement('div');
+                        div.className = 'bg-input-bg-color p-3 rounded-md border border-border-color space-y-1';
+                        div.innerHTML = `
+                            <p><span class="font-semibold text-accent-color">${item.mode}:</span> <code class="text-primary-color text-sm">${escapeHtml(item.source)}</code> ${item.destination ? `<i class="fas fa-arrow-right mx-1 text-gray-500"></i> <code class="text-primary-color text-sm">${escapeHtml(item.destination)}</code>` : ''}</p>
+                            <p class="text-xs text-gray-400">Status: <span class="${statusClass}">${item.status}</span> | ${item.timestamp ? new Date(item.timestamp.toDate()).toLocaleString() : 'N/A'}</p>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <button class="btn-secondary btn-copy-rclone-source px-3 py-1 text-xs" data-source="${escapeHtml(item.source)}"><i class="fas fa-copy"></i> Copy Source</button>
+                                ${item.destination ? `<button class="btn-secondary btn-copy-rclone-destination px-3 py-1 text-xs" data-destination="${escapeHtml(item.destination)}"><i class="fas fa-copy"></i> Copy Destination</button>` : ''}
+                            </div>
+                        `;
+                        recentRcloneTransfersDiv.appendChild(div);
+                    });
+                }
+
+                // Add event listeners for copy buttons (must be done after content is loaded)
+                document.querySelectorAll('.btn-copy-command').forEach(button => {
+                    button.onclick = (e) => copyToClipboard(e.target.dataset.command || e.target.closest('button').dataset.command);
+                });
+                document.querySelectorAll('.btn-copy-rclone-source').forEach(button => {
+                    button.onclick = (e) => copyToClipboard(e.target.dataset.source || e.target.closest('button').dataset.source);
+                });
+                document.querySelectorAll('.btn-copy-rclone-destination').forEach(button => {
+                    button.onclick = (e) => copyToClipboard(e.target.dataset.destination || e.target.closest('button').dataset.destination);
+                });
+            }, error => {
+                console.error("Error listening to recent commands:", error);
+                recentTerminalCommandsDiv.innerHTML = '<p class="text-error-color">Error loading recent commands.</p>';
+                recentRcloneTransfersDiv.innerHTML = '<p class="text-error-color">Error loading recent transfers.</p>';
+            });
+
+    } catch (error) {
+        console.error("Firebase/Firestore not initialized or error accessing data:", error);
+        recentTerminalCommandsDiv.innerHTML = '<p class="text-error-color">Error loading history (Firebase error).</p>';
+        recentRcloneTransfersDiv.innerHTML = '<p class="text-error-color">Error loading history (Firebase error).</p>';
+    }
 }
 
 
-function clearAllRecentCommands() {
-    // Replaced confirm with a custom modal if needed, but for simplicity, keeping this as is for now.
-    // In a full production app, this would be a custom modal/dialog.
+async function clearAllRecentCommands() {
+    if (!db || !userId || userId === 'anonymous') {
+        console.warn("Firestore not ready or user not authenticated. Cannot clear history.");
+        logMessage(majorStepsOutput, "Cannot clear history: Firebase not ready or user not authenticated.", 'error');
+        return;
+    }
+
     if (confirm("Are you sure you want to clear all recent commands and transfers history? This cannot be undone.")) {
-        localStorage.removeItem('terminalCommands');
-        localStorage.removeItem('rcloneTransfers');
-        loadRecentCommands(); // Reload to show empty state
-        logMessage(majorStepsOutput, "All recent commands and transfers history cleared.", 'info');
+        try {
+            // Delete notepad content
+            const notepadDocRef = db.collection(`artifacts/${appId}/users/${userId}/notepad`).doc('user_notepad');
+            const notepadDoc = await notepadDocRef.get();
+            if (notepadDoc.exists) {
+                await notepadDocRef.delete();
+                console.log("Notepad content cleared from Firestore.");
+            }
+
+            // Delete all recent commands/transfers
+            const recentCommandsCollectionRef = db.collection(`artifacts/${appId}/users/${userId}/recentCommands`);
+            const snapshot = await recentCommandsCollectionRef.get();
+            const batch = db.batch();
+            snapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+
+            console.log("All recent commands and transfers cleared from Firestore.");
+            logMessage(majorStepsOutput, "All recent commands and transfers history cleared.", 'info');
+            loadRecentCommands(); // Reload to show empty state
+            loadNotepadContent(); // Reload notepad to show empty state
+        } catch (error) {
+            console.error("Error clearing history from Firestore:", error);
+            logMessage(majorStepsOutput, `Failed to clear history: ${error.message}`, 'error');
+        }
     }
 }
 
-// --- Notepad Logic ---
-function saveNotepadContent() {
-    localStorage.setItem('notepadContent', notepadContent.value);
+
+// --- Notepad Logic (Firestore) ---
+async function saveNotepadContent() {
+    if (!db || !userId || userId === 'anonymous') {
+        console.warn("Firestore not ready or user not authenticated. Cannot save notepad content.");
+        return;
+    }
+    try {
+        // Use setDoc with merge:true to create or update the document
+        await db.collection(`artifacts/${appId}/users/${userId}/notepad`).doc('user_notepad').set({
+            content: notepadContent.value,
+            lastModified: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        console.log("Notepad content saved to Firestore.");
+    } catch (error) {
+        console.error("Error saving notepad content to Firestore:", error);
+    }
 }
 
-function loadNotepadContent() {
-    notepadContent.value = localStorage.getItem('notepadContent') || '';
+async function loadNotepadContent() {
+    if (!db || !userId || userId === 'anonymous') {
+        notepadContent.value = 'Not authenticated. Notepad content not loaded.';
+        return;
+    }
+    try {
+        // Listen for real-time updates for notepad content
+        db.collection(`artifacts/${appId}/users/${userId}/notepad`).doc('user_notepad')
+            .onSnapshot(docSnapshot => {
+                if (docSnapshot.exists) {
+                    notepadContent.value = docSnapshot.data().content || '';
+                } else {
+                    notepadContent.value = 'Type or paste your notes here. This content will be saved automatically to the cloud.';
+                }
+                console.log("Notepad content loaded/updated from Firestore.");
+            }, error => {
+                console.error("Error listening to notepad content:", error);
+                notepadContent.value = 'Error loading notepad content from Firestore.';
+            });
+    } catch (error) {
+        console.error("Firebase/Firestore not initialized or error accessing notepad:", error);
+        notepadContent.value = 'Error loading notepad (Firebase error).';
+    }
 }
+
 
 // Utility to escape HTML for display
 function escapeHtml(text) {
