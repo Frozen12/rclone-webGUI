@@ -57,8 +57,24 @@
             <nav class="card p-4 rounded-xl shadow-md">
                 <ul class="space-y-3">
                     <li><button onclick="showSection('setup')" class="nav-button"><i class="fas fa-cog mr-2"></i> Setup</button></li>
-                    <li><button onclick="showSection('rclone-transfer')" class="nav-button active"><i class="fas fa-exchange-alt mr-2"></i> Rclone Transfer</button></li>
-                    <li><button onclick="showSection('web-terminal')" class="nav-button"><i class="fas fa-terminal mr-2"></i> Web Terminal</button></li>
+                    <li>
+                        <button onclick="showSection('rclone-transfer')" class="nav-button active">
+                            <i class="fas fa-exchange-alt mr-2"></i> Rclone Transfer
+                            <span id="rclone-header-spinner" class="ml-2 hidden header-spinner-container">
+                                <div class="spinner-small"></div>
+                                <span class="spinner-text-small" id="rclone-header-spinner-text"></span>
+                            </span>
+                        </button>
+                    </li>
+                    <li>
+                        <button onclick="showSection('web-terminal')" class="nav-button">
+                            <i class="fas fa-terminal mr-2"></i> Web Terminal
+                            <span id="terminal-header-spinner" class="ml-2 hidden header-spinner-container">
+                                <div class="spinner-small"></div>
+                                <span class="spinner-text-small" id="terminal-header-spinner-text"></span>
+                            </span>
+                        </button>
+                    </li>
                     <li><button onclick="showSection('recent-commands')" class="nav-button"><i class="fas fa-history mr-2"></i> Recent Commands</button></li>
                     <li><button onclick="showSection('notepad')" class="nav-button"><i class="fas fa-clipboard mr-2"></i> Notepad</button></li>
                 </ul>
@@ -120,7 +136,6 @@
                             <option value="serve" data-description="Serve a remote over HTTP/WebDAV/FTP/etc.">serve</option>
                             <option value="dedupe" data-description="Remove duplicate files.">dedupe</option>
                             <option value="cleanup" data-description="Clean up the remote.">cleanup</option>
-                            <!-- <option value="checksum" data-description="Check files checksums.">checksum</option> --> <!-- Removed as per request -->
                             <option value="delete" data-description="Remove files in the path.">delete</option>
                             <option value="deletefile" data-description="Remove a single file from remote.">deletefile</option>
                             <option value="purge" data-description="Remove all content in the path.">purge</option>
@@ -251,7 +266,7 @@
                     <button id="execute-terminal-btn" class="btn-primary w-full md:w-auto flex-1"><i class="fas fa-play mr-2"></i> Execute Command</button>
                     <button id="stop-terminal-btn" class="btn-danger w-full md:w-auto flex-1 hidden"><i class="fas fa-stop mr-2"></i> Stop Process</button>
                     <button onclick="clearTerminalOutput()" class="btn-secondary w-full md:w-auto flex-1"><i class="fas fa-eraser mr-2"></i> Clear Output</button>
-                    <button onclick="downloadTerminalLogs()" class="btn-secondary w-full md:w-auto flex-1"><i class="fas fa-download mr-2"></i> Download Terminal Log</button> <!-- New Download Terminal Log button -->
+                    <button onclick="downloadTerminalLogs()" class="btn-secondary w-full md:w-auto flex-1"><i class="fas fa-download mr-2"></i> Download Terminal Log</button>
                 </div>
 
                 <div class="relative">
