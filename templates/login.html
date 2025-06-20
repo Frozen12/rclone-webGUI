@@ -7,20 +7,237 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Montserrat:wght@700&display=swap" rel="stylesheet">
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script>
-        // Apply theme immediately to prevent flash of unstyled content
-        (function() {
-            const theme = localStorage.getItem('theme') || 'dark-mode'; // Default to dark-mode
-            document.documentElement.className = theme;
-        })();
-    </script>
     <style>
-        .login-card {
-            background-color: rgba(var(--card-bg-color-rgb), 0.85);
-            backdrop-filter: blur(10px);
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden; /* Hide overflow for background shapes */
+            position: relative;
+        }
+        :root {
+            /* Default Greenish White Monochromatic */
+            --primary-color: #E0EAE0; /* Soft greenish-white */
+            --accent-color: #6A9A6A; /* Muted deep green */
+            --bg-color: #0F1A0F; /* Dark background */
+            --card-bg-color: #1C2B1C; /* Slightly lighter dark for cards */
+            --text-color: #E0EAE0; /* Light text */
+            --border-color: #384A38; /* Darker green border */
+            --input-bg-color: #2A3B2A;
+            --button-bg-color: #558A55;
+            --button-text-color: #F0F5F0; /* Slightly off-white for button text */
+            --success-color: #4CAF50;
+            --error-color: #F44336;
+            --warning-color: #FFC107;
+            --bg-gradient-start: #1A2A1A;
+            --bg-gradient-end: #0B140B;
+        }
+
+        /* Dedicated Black Mode */
+        .black-mode {
+            --primary-color: #E0E0E0; /* Light gray for text */
+            --accent-color: #4CAF50; /* Vibrant green accent */
+            --bg-color: #000000; /* Pure black background */
+            --card-bg-color: #1C1C1C; /* Dark gray for cards */
+            --text-color: #E0E0E0; /* General text color */
+            --border-color: #333333; /* Darker gray border */
+            --input-bg-color: #282828; /* Slightly lighter input background */
+            --button-bg-color: #4CAF50; /* Green button */
+            --button-text-color: #FFFFFF; /* White text for buttons */
+            --success-color: #4CAF50;
+            --error-color: #E53935;
+            --warning-color: #FFB300;
+            --info-color: #2196F3;
+            --bg-gradient-start: #000000;
+            --bg-gradient-end: #000000;
+        }
+
+        /* --- Theme definitions (muted and high contrast) --- */
+        .dark-mode { /* Default */
+            --primary-color: #E0EAE0; --accent-color: #6A9A6A; --bg-color: #0F1A0F; --card-bg-color: #1C2B1C; --text-color: #E0EAE0; --border-color: #384A38; --input-bg-color: #2A3B2A; --button-bg-color: #558A55; --button-text-color: #F0F5F0;
+            --bg-gradient-start: #1A2A1A; --bg-gradient-end: #0B140B;
+        }
+        .theme-blue {
+            --primary-color: #DDEBF0; --accent-color: #4FB0CC; --bg-color: #0B4F6C; --card-bg-color: #176587; --text-color: #DDEBF0; --border-color: #3A7B9A; --input-bg-color: #2B5F7F; --button-bg-color: #408BB0; --button-text-color: #E0F5F8;
+            --bg-gradient-start: #176587; --bg-gradient-end: #0B4F6C;
+        }
+        .theme-purple {
+            --primary-color: #E8E0EC; --accent-color: #8C5BB0; --bg-color: #3C1E5B; --card-bg-color: #4B2A6B; --text-color: #E8E0EC; --border-color: #6A3A8A; --input-bg-color: #5A3A7A; --button-bg-color: #7B4BA0; --button-text-color: #F0E5F5;
+            --bg-gradient-start: #4B2A6B; --bg-gradient-end: #3C1E5B;
+        }
+        .theme-orange {
+            --primary-color: #F5E9DD; --accent-color: #D67F2C; --bg-color: #8C4B1E; --card-bg-color: #A05F2F; --text-color: #F5E9DD; --border-color: #B07B4A; --input-bg-color: #A06B3A; --button-bg-color: #C08B5B; --button-text-color: #FAECD9;
+            --bg-gradient-start: #A05F2F; --bg-gradient-end: #8C4B1E;
+        }
+        .theme-red {
+            --primary-color: #F0E3E3; --accent-color: #B04F4F; --bg-color: #7A2F2F; --card-bg-color: #8A3A3A; --text-color: #F0E3E3; --border-color: #A04A4A; --input-bg-color: #903A3A; --button-bg-color: #B05B5B; --button-text-color: #F5EDED;
+            --bg-gradient-start: #8A3A3A; --bg-gradient-end: #7A2F2F;
+        }
+        .theme-teal {
+            --primary-color: #E0EFEF; --accent-color: #4FB0B0; --bg-color: #0F5A5A; --card-bg-color: #1C6B6B; --text-color: #E0EFEF; --border-color: #388A8A; --input-bg-color: #2A7B7B; --button-bg-color: #559A9A; --button-text-color: #E5F5F5;
+            --bg-gradient-start: #1C6B6B; --bg-gradient-end: #0F5A5A;
+        }
+        .theme-indigo {
+            --primary-color: #E3E5F0; --accent-color: #5B6AB0; --bg-color: #2A3B7A; --card-bg-color: #3C4E8C; --text-color: #E3E5F0; --border-color: #4A5A9A; --input-bg-color: #3A4A8A; --button-bg-color: #6A7BC0; --button-text-color: #E8ECF5;
+            --bg-gradient-start: #3C4E8C; --bg-gradient-end: #2A3B7A;
+        }
+
+        .background-shapes {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+        }
+
+        .shape-1 {
+            position: absolute;
+            top: -10%;
+            left: -10%;
+            width: 40%;
+            height: 40%;
+            background: rgba(var(--accent-color-rgb, 106, 154, 106), 0.1);
+            border-radius: 50%;
+            filter: blur(50px);
+            animation: float1 15s infinite ease-in-out alternate;
+        }
+        .shape-2 {
+            position: absolute;
+            bottom: -15%;
+            right: -15%;
+            width: 50%;
+            height: 50%;
+            background: rgba(var(--primary-color-rgb, 224, 234, 224), 0.08);
+            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+            filter: blur(60px);
+            animation: float2 20s infinite ease-in-out alternate;
+        }
+        .shape-3 {
+            position: absolute;
+            top: 20%;
+            right: 5%;
+            width: 25%;
+            height: 25%;
+            background: rgba(var(--button-bg-color-rgb, 85, 138, 85), 0.15);
+            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            filter: blur(40px);
+            animation: float3 18s infinite ease-in-out alternate;
+        }
+
+        @keyframes float1 {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(20px, 30px) rotate(5deg); }
+        }
+        @keyframes float2 {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(-30px, -20px) rotate(-8deg); }
+        }
+        @keyframes float3 {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(10px, -15px) rotate(10deg); }
+        }
+
+        /* Utility to get RGB values from CSS variables for rgba() */
+        :root {
+            --accent-color-rgb: 106, 154, 106; /* Default for greenish-white */
+            --primary-color-rgb: 224, 234, 224;
+            --button-bg-color-rgb: 85, 138, 85;
+            --card-bg-color-rgb: 28, 43, 28;
+        }
+        .theme-blue {
+            --accent-color-rgb: 79, 176, 204;
+            --primary-color-rgb: 221, 235, 240;
+            --button-bg-color-rgb: 64, 139, 176;
+            --card-bg-color-rgb: 23, 101, 135;
+        }
+        .theme-purple {
+            --accent-color-rgb: 140, 91, 176;
+            --primary-color-rgb: 232, 224, 236;
+            --button-bg-color-rgb: 123, 75, 160;
+            --card-bg-color-rgb: 75, 42, 107;
+        }
+        .theme-orange {
+            --accent-color-rgb: 214, 127, 44;
+            --primary-color-rgb: 245, 233, 221;
+            --button-bg-color-rgb: 192, 139, 91;
+            --card-bg-color-rgb: 160, 95, 47;
+        }
+        .theme-red {
+            --accent-color-rgb: 176, 79, 79;
+            --primary-color-rgb: 240, 227, 227;
+            --button-bg-color-rgb: 176, 91, 91;
+            --card-bg-color-rgb: 138, 58, 58;
+        }
+        .theme-teal {
+            --accent-color-rgb: 79, 176, 176;
+            --primary-color-rgb: 224, 239, 239;
+            --button-bg-color-rgb: 85, 154, 154;
+            --card-bg-color-rgb: 28, 107, 107;
+        }
+        .theme-indigo {
+            --accent-color-rgb: 91, 106, 176;
+            --primary-color-rgb: 227, 229, 240;
+            --button-bg-color-rgb: 106, 123, 192;
+            --card-bg-color-rgb: 60, 78, 140;
+        }
+        .black-mode {
+            --accent-color-rgb: 76, 175, 80;
+            --primary-color-rgb: 224, 224, 224;
+            --button-bg-color-rgb: 76, 175, 80;
+            --card-bg-color-rgb: 28, 28, 28;
+        }
+
+
+        .card {
+            background-color: var(--card-bg-color);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            color: var(--text-color);
+        }
+        .input-field {
+            background-color: var(--input-bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+        .btn-primary {
+            background-color: var(--button-bg-color);
+            color: var(--button-text-color);
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+        }
+        .btn-primary:hover {
+            background-color: var(--accent-color);
+            transform: translateY(-1px);
+        }
+        .btn-primary:active {
+            transform: translateY(1px);
+        }
+        .error-message {
+            color: var(--error-color);
+        }
+        .app-title {
+            font-family: 'Montserrat', sans-serif; /* Changed to Montserrat */
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
     </style>
+    <script>
+        // Apply saved theme immediately on page load to prevent flash
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark-mode';
+            document.documentElement.className = savedTheme; // Apply to html or body
+            document.body.className = savedTheme; // Apply to body for fallback/compatibility
+        })();
+    </script>
 </head>
 <body class="flex flex-col justify-center items-center min-h-screen p-4">
     <div class="background-shapes">
@@ -28,19 +245,19 @@
         <div class="shape-2"></div>
         <div class="shape-3"></div>
     </div>
-    <div class="login-card p-8 rounded-xl shadow-lg w-full max-w-md relative z-10 border border-border-color">
-        <h1 class="text-4xl font-bold text-center mb-6 app-title">Rclone WebGUI</h1>
+    <div class="card p-8 rounded-xl shadow-lg w-full max-w-md relative z-10">
+        <h1 class="text-4xl font-bold text-center mb-6 app-title">Rclone WebGUI Login</h1>
         {% if error %}
-        <p class="error-message text-center mb-4 p-2 bg-red-500/20 text-red-300 rounded-md">{{ error }}</p>
+        <p class="error-message text-center mb-4 text-red-400">{{ error }}</p>
         {% endif %}
         <form action="/login" method="post" class="space-y-4">
             <div>
-                <label for="username" class="input-label">Username</label>
+                <label for="username" class="block text-sm font-bold mb-2 text-primary-color">Username</label>
                 <input type="text" id="username" name="username" required
                        class="input-field w-full p-3 rounded-lg focus:ring-2 focus:ring-accent-color focus:border-transparent outline-none">
             </div>
             <div>
-                <label for="password" class="input-label">Password</label>
+                <label for="password" class="block text-sm font-bold mb-2 text-primary-color">Password</label>
                 <input type="password" id="password" name="password" required
                        class="input-field w-full p-3 rounded-lg focus:ring-2 focus:ring-accent-color focus:border-transparent outline-none">
             </div>
@@ -50,5 +267,6 @@
             </button>
         </form>
     </div>
+
 </body>
 </html>
