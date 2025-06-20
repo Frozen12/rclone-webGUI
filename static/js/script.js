@@ -90,7 +90,7 @@ const startRcloneBtn = document.getElementById('start-rclone-btn');
 const stopRcloneBtn = document.getElementById('stop-rclone-btn');
 const rcloneLiveOutput = document.getElementById('rcloneLiveOutput');
 const rcloneMajorStepsOutput = document.getElementById('rclone-major-steps');
-const rcloneSpinner = document.getElementById('rclone-spinner'); // Spinner beside title
+const rcloneSpinner = document.getElementById('rclone-spinner'); // Spinner next to title
 
 const rcloneConfFileInput = document.getElementById('rclone_conf_file_input');
 const rcloneConfFileNameDisplay = document.getElementById('rclone-conf-file-name');
@@ -102,7 +102,7 @@ const terminalCommandInput = document.getElementById('terminalCommand');
 const executeTerminalBtn = document.getElementById('execute-terminal-btn');
 const stopTerminalBtn = document.getElementById('stop-terminal-btn');
 const terminalOutput = document.getElementById('terminalOutput');
-const terminalSpinner = document.getElementById('terminal-spinner'); // Spinner beside title
+const terminalSpinner = document.getElementById('terminal-spinner'); // Spinner next to title
 const terminalConfirmModal = document.getElementById('terminalConfirmModal');
 const terminalConfirmMessage = document.getElementById('terminalConfirmMessage');
 const confirmStopAndStartBtn = document.getElementById('confirmStopAndStartBtn');
@@ -203,19 +203,19 @@ function showSection(sectionId) {
 }
 
 function showRcloneSpinner() {
-    rcloneSpinner.classList.remove('hidden');
+    rcloneSpinner.style.display = 'block'; // Make spinner visible
 }
 
 function hideRcloneSpinner() {
-    rcloneSpinner.classList.add('hidden');
+    rcloneSpinner.style.display = 'none'; // Hide spinner
 }
 
 function showTerminalSpinner() {
-    terminalSpinner.classList.remove('hidden');
+    terminalSpinner.style.display = 'block'; // Make spinner visible
 }
 
 function hideTerminalSpinner() {
-    terminalSpinner.classList.add('hidden');
+    terminalSpinner.style.display = 'none'; // Hide spinner
 }
 
 // --- Header Scroll Behavior ---
@@ -869,34 +869,61 @@ async function clearAllRecentCommands() {
         return;
     }
 
-    if (confirm("Are you sure you want to clear all recent commands and transfers history? This cannot be undone.")) {
-        try {
-            // Delete notepad content
-            const notepadDocRef = db.collection(`artifacts/${appId}/users/${userId}/notepad`).doc('user_notepad');
-            const notepadDoc = await notepadDocRef.get();
-            if (notepadDoc.exists) {
-                await notepadDocRef.delete();
-                console.log("Notepad content cleared from Firestore.");
+    // Custom confirmation modal instead of browser's confirm()
+    const confirmModal = document.createElement('div');
+    confirmModal.className = 'modal';
+    confirmModal.innerHTML = `
+        <div class="modal-content card rounded-xl p-8 shadow-2xl">
+            <h2 class="text-2xl font-bold mb-4 text-primary-color">Confirm Clear History</h2>
+            <p class="text-text-color mb-6">Are you sure you want to clear all recent commands and transfers history, including notepad content? This cannot be undone.</p>
+            <div class="flex justify-end space-x-4">
+                <button id="confirmClearBtn" class="btn-danger"><i class="fas fa-trash-alt mr-2"></i> Clear All</button>
+                <button id="cancelClearBtn" class="btn-secondary"><i class="fas fa-times-circle mr-2"></i> Cancel</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(confirmModal);
+
+    const confirmClearBtn = document.getElementById('confirmClearBtn');
+    const cancelClearBtn = document.getElementById('cancelClearBtn');
+
+    return new Promise((resolve) => {
+        confirmClearBtn.onclick = async () => {
+            document.body.removeChild(confirmModal);
+            try {
+                // Delete notepad content
+                const notepadDocRef = db.collection(`artifacts/${appId}/users/${userId}/notepad`).doc('user_notepad');
+                const notepadDoc = await notepadDocRef.get();
+                if (notepadDoc.exists) {
+                    await notepadDocRef.delete();
+                    console.log("Notepad content cleared from Firestore.");
+                }
+
+                // Delete all recent commands/transfers
+                const recentCommandsCollectionRef = db.collection(`artifacts/${appId}/users/${userId}/recentCommands`);
+                const snapshot = await recentCommandsCollectionRef.get();
+                const batch = db.batch();
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+
+                console.log("All recent commands and transfers cleared from Firestore.");
+                logMessage(majorStepsOutput, "All recent commands and transfers history cleared.", 'info');
+                loadRecentCommands(); // Reload to show empty state
+                loadNotepadContent(); // Reload notepad to show empty state
+                resolve(true); // Resolve promise
+            } catch (error) {
+                console.error("Error clearing history from Firestore:", error);
+                logMessage(majorStepsOutput, `Failed to clear history: ${error.message}`, 'error');
+                resolve(false); // Resolve promise with false on error
             }
-
-            // Delete all recent commands/transfers
-            const recentCommandsCollectionRef = db.collection(`artifacts/${appId}/users/${userId}/recentCommands`);
-            const snapshot = await recentCommandsCollectionRef.get();
-            const batch = db.batch();
-            snapshot.docs.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-            await batch.commit();
-
-            console.log("All recent commands and transfers cleared from Firestore.");
-            logMessage(majorStepsOutput, "All recent commands and transfers history cleared.", 'info');
-            loadRecentCommands(); // Reload to show empty state
-            loadNotepadContent(); // Reload notepad to show empty state
-        } catch (error) {
-            console.error("Error clearing history from Firestore:", error);
-            logMessage(majorStepsOutput, `Failed to clear history: ${error.message}`, 'error');
-        }
-    }
+        };
+        cancelClearBtn.onclick = () => {
+            document.body.removeChild(confirmModal);
+            resolve(false); // Resolve promise with false on cancel
+        };
+    });
 }
 
 
