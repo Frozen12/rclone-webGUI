@@ -375,36 +375,6 @@ body {
     box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.4);
 }
 
-/* Spinner Overlay */
-.spinner-overlay {
-    position: absolute;
-    top: 0; /* Position at the top of the parent relative container */
-    left: 0;
-    right: 0;
-    height: 60px; /* Smaller height, covers only the top part for message/spinner */
-    background-color: rgba(var(--card-bg-color-rgb), 0.7); /* More transparent */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    border-radius: 0.75rem;
-    z-index: 10;
-    backdrop-filter: blur(2px); /* Slightly less blur */
-    color: var(--primary-color);
-    font-weight: 500;
-    /* Position the spinner relative to its parent section, not the output area */
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100%;
-    max-width: 300px; /* Limit width */
-    height: 100px; /* Adjust height */
-    border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    pointer-events: none; /* Allow interaction with elements behind it */
-}
-
 /* Spinner directly next to the title (within the h2 flex container) */
 .section-title-spinner {
     margin-left: 1rem;
@@ -591,61 +561,38 @@ header {
         margin-left: 0;
         margin-top: 0.5rem;
     }
-    header .flex-wrap {
-        flex-direction: column;
-        align-items: flex-start;
+    /* Adjusted header for mobile */
+    header {
+        flex-direction: column; /* Stack header items vertically */
+        align-items: flex-start; /* Align items to the left */
+        padding: 1rem; /* Adjust padding for smaller screens */
     }
-    header .space-x-4 {
-        margin-top: 1rem;
-        width: 100%;
+
+    header .flex.items-center:first-child { /* Contains SVG and App Title */
+        width: 100%; /* Take full width */
+        justify-content: space-between; /* Space out title and right-aligned button container */
+        margin-bottom: 0.5rem; /* Add some space below this row */
+    }
+
+    header .flex.items-center.space-x-4 { /* Contains User ID, Theme, and Logout buttons */
+        width: 100%; /* Take full width */
         justify-content: flex-end; /* Align to the right */
-        align-items: center; /* Vertically center items */
-        flex-direction: row; /* Ensure buttons stay in a row */
-    }
-    /* Mobile specific adjustments for logout and theme buttons */
-    header .btn-danger,
-    header .btn-secondary { /* Logout button and Theme button */
-        padding: 0.5rem 1rem; /* Smaller padding */
-        font-size: 0.8rem; /* Smaller font size */
-        width: auto; /* Allow content to dictate width */
+        margin-top: 0; /* Remove default top margin */
+        order: 1; /* Ensure this row appears after the title/SVG row */
     }
 
     header .app-title {
-        font-size: 2.5rem; /* Relatively larger on mobile header */
-        text-align: left;
-        width: 100%;
-    }
-    header > div:first-child { /* The div containing the SVG and app title */
-        width: 100%; /* Take full width on mobile */
-        justify-content: space-between; /* Space out title and right-aligned buttons */
-        align-items: center;
-        flex-direction: row; /* Ensure title and buttons are in a row */
-    }
-    header .flex.items-center { /* Contains title and SVG */
-        width: auto; /* Allow content to dictate width */
+        font-size: 2.2rem; /* Adjusted title size for mobile header */
     }
 
-    /* Adjust the main header flex container to wrap and align items correctly */
-    header {
-        flex-direction: row; /* Keep header content in a row initially */
-        justify-content: space-between; /* Push items to ends */
-        align-items: center; /* Vertically align items */
+    header .btn-danger,
+    header .btn-secondary { /* Logout button and Theme button */
+        padding: 0.5rem 0.8rem; /* Smaller padding for mobile buttons */
+        font-size: 0.75rem; /* Smaller font size for mobile buttons */
+        flex-shrink: 0; /* Prevent shrinking */
     }
-    /* For smaller screens, allow wrapping and adjust alignment */
-    @media (max-width: 768px) {
-        header {
-            flex-direction: column; /* Stack vertically on small screens */
-            align-items: flex-start; /* Align stacked items to the start */
-        }
-        header .flex.items-center:first-child { /* App title and SVG */
-            width: 100%;
-            justify-content: flex-start; /* Align title to left */
-            margin-bottom: 0.5rem; /* Space below title */
-        }
-        header .space-x-4 { /* Theme and Logout buttons */
-            width: 100%;
-            justify-content: flex-end; /* Keep buttons to the right */
-            margin-top: 0; /* Remove top margin as they are part of new row */
-        }
+    /* Ensure userId and buttons are spaced on mobile */
+    header .space-x-4 > *:not(:first-child) {
+        margin-left: 0.5rem; /* Reduced space between buttons */
     }
 }
