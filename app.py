@@ -304,7 +304,8 @@ def execute_rclone():
     def generate_rclone_output():
         global rclone_process
         global rclone_output_buffer
-        full_output = []
+        full_output_lines = [] # Collect all lines for final output
+
         stop_rclone_flag.clear() # Clear the stop flag for a new run
 
         try:
@@ -315,32 +316,49 @@ def execute_rclone():
                     stderr=subprocess.STDOUT, # Merge stdout and stderr
                     universal_newlines=True,
                     bufsize=1, # Line-buffered
-                    env=rclone_env # Pass environment variables
+                    env=rclone_env if mode not in ["version", "listremotes"] else os.environ.copy() # Only pass rclone_env for actual rclone operations
                 )
 
-            for line in iter(rclone_process.stdout.readline, ''):
-                if stop_rclone_flag.is_set():
-                    rclone_process.terminate()
-                    yield json.dumps({"status": "stopped", "message": "Rclone process stopped by user."}) + '\n'
-                    break
+            if mode in ["version", "listremotes"]:
+                # For these modes, capture the complete output and send it as one block
+                stdout, _ = rclone_process.communicate() # stderr is merged into stdout
+                full_raw_output = stdout.strip()
+                write_to_log(LOG_FILE, full_raw_output) # Log the full output
+                return_code = rclone_process.returncode
+                final_status = "complete" if return_code == 0 else "error"
+                final_message = "Rclone command completed successfully." if return_code == 0 else f"Rclone command failed with exit code {return_code}."
+                
+                yield json.dumps({
+                    "status": final_status,
+                    "message": final_message,
+                    "output": full_raw_output # Send the raw output directly
+                }) + '\n'
+            else:
+                # Existing streaming logic for other modes
+                for line in iter(rclone_process.stdout.readline, ''):
+                    if stop_rclone_flag.is_set():
+                        rclone_process.terminate()
+                        yield json.dumps({"status": "stopped", "message": "Rclone process stopped by user."}) + '\n'
+                        break
 
-                line_stripped = line.strip()
-                if line_stripped:
-                    write_to_log(LOG_FILE, line_stripped)
-                    yield json.dumps({"status": "progress", "output": line_stripped}) + '\n'
-                    full_output.append(line_stripped)
+                    line_stripped = line.strip()
+                    if line_stripped:
+                        write_to_log(LOG_FILE, line_stripped)
+                        yield json.dumps({"status": "progress", "output": line_stripped}) + '\n'
+                        full_output_lines.append(line_stripped)
 
-            rclone_process.wait()
-            return_code = rclone_process.returncode
-            final_status = "complete" if return_code == 0 else "error"
-            final_message = "Rclone command completed successfully." if return_code == 0 else f"Rclone command failed with exit code {return_code}."
-            final_output_lines = read_last_n_lines(LOG_FILE, 50) # Get last 50 lines for final summary
+                rclone_process.wait() # Ensure process finishes
+                return_code = rclone_process.returncode
+                final_status = "complete" if return_code == 0 else "error"
+                final_message = "Rclone command completed successfully." if return_code == 0 else f"Rclone command failed with exit code {return_code}."
+                # For streaming modes, return collected lines if available, otherwise read from log
+                output_to_send = "\n".join(full_output_lines) if full_output_lines else "\n".join(read_last_n_lines(LOG_FILE, 50))
 
-            yield json.dumps({
-                "status": final_status,
-                "message": final_message,
-                "output": "\n".join(final_output_lines)
-            }) + '\n'
+                yield json.dumps({
+                    "status": final_status,
+                    "message": final_message,
+                    "output": output_to_send
+                }) + '\n'
 
         except FileNotFoundError:
             yield json.dumps({"status": "error", "message": "Rclone executable not found. Ensure it's installed and in PATH."}) + '\n'
