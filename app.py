@@ -20,9 +20,8 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=360) # Remember use
 BASE_CONFIG_DIR = '/app/.config/rclone'
 RCLONE_CONFIG_PATH = os.path.join(BASE_CONFIG_DIR, 'rclone.conf')
 SERVICE_ACCOUNT_DIR = BASE_CONFIG_DIR # Service accounts are now extracted into BASE_CONFIG_DIR
-LOG_FILE = os.path.join('/tmp', 'rcloneLog.txt') # Use /tmp for ephemeral Rclone logs on Render (aggregated)
-TERMINAL_LOG_FILE = os.path.join('/tmp', 'terminalLog.txt') # Use /tmp for ephemeral Terminal logs on Render (aggregated)
-RCLONE_PROCESS_LOG_DIR = '/tmp/rclone_process_logs' # Directory for individual Rclone process logs
+LOG_FILE = os.path.join('/tmp', 'rcloneLog.txt') # Use /tmp for ephemeral Rclone logs on Render
+TERMINAL_LOG_FILE = os.path.join('/tmp', 'terminalLog.txt') # Use /tmp for ephemeral Terminal logs on Render
 
 # Login Credentials
 LOGIN_USERNAME = os.environ.get('LOGIN_USERNAME', 'admin')
@@ -32,7 +31,6 @@ LOGIN_PASSWORD = os.environ.get('LOGIN_PASSWORD', 'password') # IMPORTANT: Chang
 def write_to_log(filename, content):
     """Appends content to a specified log file."""
     try:
-        os.makedirs(os.path.dirname(filename), exist_ok=True) # Ensure directory exists
         with open(filename, 'a', encoding='utf-8') as f:
             f.write(content + '\n')
     except Exception as e:
@@ -62,33 +60,29 @@ def read_full_log(filename):
 def create_initial_dirs():
     """Creates necessary directories for the application."""
     os.makedirs(BASE_CONFIG_DIR, exist_ok=True)
-    os.makedirs(RCLONE_PROCESS_LOG_DIR, exist_ok=True)
     # Ensure logs are cleared on startup for a fresh start each deployment/restart
     clear_log(LOG_FILE)
     clear_log(TERMINAL_LOG_FILE)
-    
-    # Clear any old individual Rclone process logs
-    for f in os.listdir(RCLONE_PROCESS_LOG_DIR):
-        os.remove(os.path.join(RCLONE_PROCESS_LOG_DIR, f))
-
-    print(f"Directories created: {BASE_CONFIG_DIR}, {RCLONE_PROCESS_LOG_DIR}")
-    print(f"Logs cleared: {LOG_FILE}, {TERMINAL_LOG_FILE}, individual Rclone process logs.")
+    print(f"Directories created: {BASE_CONFIG_DIR}")
+    print(f"Logs cleared: {LOG_FILE}, {TERMINAL_LOG_FILE}")
 
 # Call directory creation on app startup
 with app.app_context():
     create_initial_dirs()
 
 # --- Global Variables for Rclone and Terminal Processes ---
-# Rclone process management: Dictionary to hold multiple background processes
-# Key: process_id (timestamp), Value: {'process_obj': Popen_object, 'command': 'cmd', 'pid': int, 'status': 'running'|'completed'|'failed', 'log_file_path': 'path', 'stop_flag': Event}
-active_rclone_processes = {}
-rclone_lock = threading.Lock() # Protects active_rclone_processes
+# Rclone process management
+rclone_process = None
+rclone_output_buffer = [] # Not directly used for streaming to client, but can be for internal state
+rclone_lock = threading.Lock() # Protects rclone_process and rclone_output_buffer
+stop_rclone_flag = threading.Event() # Flag to signal rclone process to stop
 
-# Terminal process management: Dictionary to hold multiple background processes
-# Key: process_id (timestamp), Value: {'process_obj': Popen_object, 'command': 'cmd', 'pid': int, 'status': 'running'|'completed'|'failed'}
-active_terminal_processes = {}
-terminal_lock = threading.Lock() # Protects active_terminal_processes
-
+# Terminal process management
+terminal_process = None
+# terminal_output_buffer is no longer used for live polling from client,
+# output is written directly to TERMINAL_LOG_FILE and read from there.
+terminal_lock = threading.Lock() # Protects terminal_process
+stop_terminal_flag = threading.Event() # Flag to signal terminal process to stop
 
 # --- Authentication Decorator ---
 def login_required(f):
@@ -179,61 +173,17 @@ def upload_sa_zip():
             return jsonify({"status": "error", "message": "Invalid ZIP file."}), 400
         except Exception as e:
             return jsonify({"status": "error", "message": f"Failed to process service account ZIP: {e}"}), 500
-    return jsonify({"status": "error", "message": "Invalid file type. Please upload a .zip file."}), 500
-
-# --- Rclone Functions (Updated for Background Execution) ---
-def _stream_rclone_output_to_file(process_id, process_obj, process_log_file_path, aggregated_log_file_path, stop_flag):
-    """Internal function to stream Rclone subprocess output to its specific file and the aggregated log."""
-    clear_log(process_log_file_path) # Clear process-specific log before starting
-
-    with rclone_lock:
-        active_rclone_processes[process_id]['status'] = 'running'
-
-    try:
-        # Write command start to aggregated log
-        command_str = " ".join(process_obj.args) if isinstance(process_obj.args, list) else process_obj.args
-        write_to_log(aggregated_log_file_path, f"--- Rclone Command {process_id} (PID: {process_obj.pid}) Started: {command_str} ---")
-
-        for line in iter(process_obj.stdout.readline, ''):
-            line_stripped = line.strip()
-            if line_stripped:
-                write_to_log(process_log_file_path, line_stripped)
-                write_to_log(aggregated_log_file_path, line_stripped)
-            if stop_flag.is_set():
-                break # Exit loop if stop flag is set
-
-        process_obj.wait()
-        return_code = process_obj.returncode
-        with rclone_lock:
-            if process_id in active_rclone_processes:
-                if stop_flag.is_set():
-                    active_rclone_processes[process_id]['status'] = 'stopped'
-                    final_message = f"Rclone process {process_id} stopped by user."
-                elif return_code == 0:
-                    active_rclone_processes[process_id]['status'] = 'completed'
-                    final_message = f"Rclone process {process_id} completed successfully."
-                else:
-                    active_rclone_processes[process_id]['status'] = 'failed'
-                    final_message = f"Rclone process {process_id} failed with exit code {return_code}."
-                
-                # Write final status to aggregated log
-                write_to_log(aggregated_log_file_path, f"--- Rclone Command {process_id} ({active_rclone_processes[process_id]['status']}): {final_message} ---")
-
-    except Exception as e:
-        with rclone_lock:
-            if process_id in active_rclone_processes:
-                active_rclone_processes[process_id]['status'] = 'failed'
-                write_to_log(aggregated_log_file_path, f"--- Rclone Command {process_id} Failed (Error): {e} ---")
-        print(f"Error streaming Rclone output for {process_id}: {e}")
-    finally:
-        # Do not remove process_log_file_path here, frontend might need to download it
-        pass
-
+    return jsonify({"status": "error", "message": "Invalid file type. Please upload a .zip file."}), 400
 
 @app.route('/execute-rclone', methods=['POST'])
 @login_required
 def execute_rclone():
-    """Executes an Rclone command in the background."""
+    """Executes an Rclone command as a subprocess and streams output."""
+    global rclone_process
+    with rclone_lock:
+        if rclone_process and rclone_process.poll() is None:
+            return jsonify({"status": "error", "message": "Rclone process already running. Please stop it first."}), 409
+
     data = request.get_json()
     mode = data.get('mode')
     source = data.get('source', '').strip()
@@ -327,9 +277,13 @@ def execute_rclone():
 
         # Environment variables for rclone (as specified by user)
         rclone_env = os.environ.copy()
+        # RCLONE_CONFIG is handled by --config flag, so these are mostly redundant for config
+        # rclone_env['RCLONE_CONFIG'] = RCLONE_CONFIG_PATH
         rclone_env['RCLONE_FAST_LIST'] = 'true'
         rclone_env['RCLONE_DRIVE_TPSLIMIT'] = '3'
         rclone_env['RCLONE_DRIVE_ACKNOWLEDGE_ABUSE'] = 'true'
+        # RCLONE_LOG_FILE is handled by --log-file, so this is mostly redundant
+        # rclone_env['RCLONE_LOG_FILE'] = LOG_FILE
         rclone_env['RCLONE_DRIVE_PACER_MIN_SLEEP'] = '50ms'
         rclone_env['RCLONE_DRIVE_PACER_BURST'] = '2'
         rclone_env['RCLONE_SERVER_SIDE_ACROSS_CONFIGS'] = 'true'
@@ -339,352 +293,190 @@ def execute_rclone():
         cmd.append("--stats=3s") # Provide stats every 3 seconds
         cmd.append("--stats-one-line-date") # Single line stats with date
 
-    process_id = str(time.time()) # Unique ID for this Rclone process
-    process_log_file_path = os.path.join(RCLONE_PROCESS_LOG_DIR, f'rclone_process_{process_id}.txt')
+    print(f"Executing Rclone command: {' '.join(cmd)}")
+    clear_log(LOG_FILE) # Clear log before new execution
 
-    print(f"Executing Rclone command: {' '.join(cmd)} with process_id: {process_id}")
+    # Generator function to stream output
+    def generate_rclone_output():
+        global rclone_process
+        stop_rclone_flag.clear() # Clear the stop flag for a new run
 
-    try:
-        # Create a new stop flag for this specific process
-        stop_current_process_flag = threading.Event()
-        
-        process_obj = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, # Merge stdout and stderr
-            universal_newlines=True,
-            bufsize=1, # Line-buffered
-            env=rclone_env if 'rclone_env' in locals() else os.environ.copy() # Pass environment variables if created
-        )
+        try:
+            with rclone_lock:
+                rclone_process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT, # Merge stdout and stderr
+                    universal_newlines=True,
+                    bufsize=1, # Line-buffered
+                    env=rclone_env if 'rclone_env' in locals() else os.environ.copy() # Pass environment variables if created
+                )
 
-        with rclone_lock:
-            active_rclone_processes[process_id] = {
-                'process_obj': process_obj,
-                'command': ' '.join(cmd), # Store full command string
-                'pid': process_obj.pid,
-                'status': 'starting', # Will be updated to 'running' by the thread
-                'log_file_path': process_log_file_path,
-                'stop_flag': stop_current_process_flag # Store the specific stop flag
-            }
+            for line in iter(rclone_process.stdout.readline, ''):
+                if stop_rclone_flag.is_set():
+                    # If flag is set, terminate and break loop
+                    rclone_process.terminate()
+                    yield json.dumps({"status": "stopped", "message": "Rclone process stopped by user."}) + '\n'
+                    break
 
-        # Start a separate thread to consume output and write to log files
-        threading.Thread(
-            target=_stream_rclone_output_to_file,
-            args=(process_id, process_obj, process_log_file_path, LOG_FILE, stop_current_process_flag),
-            daemon=True # Daemon threads are terminated when the main program exits
-        ).start()
+                line_stripped = line.strip()
+                if line_stripped:
+                    write_to_log(LOG_FILE, line_stripped)
+                    # Send each line as a JSON object
+                    yield json.dumps({"status": "progress", "output": line_stripped}) + '\n'
 
-        return jsonify({"status": "success", "message": f"Rclone command started with PID {process_obj.pid}.", "process_id": process_id})
-    except FileNotFoundError:
-        with rclone_lock:
-            if process_id in active_rclone_processes:
-                del active_rclone_processes[process_id]
-        return jsonify({"status": "error", "message": "Rclone executable not found. Ensure it's installed and in PATH."}), 500
-    except Exception as e:
-        with rclone_lock:
-            if process_id in active_rclone_processes:
-                del active_rclone_processes[process_id] # Clean up if starting failed
-        return jsonify({"status": "error", "message": f"Failed to execute command: {e}"}), 500
+            rclone_process.wait()
+            return_code = rclone_process.returncode
+            final_status = "complete" if return_code == 0 else "error"
+            final_message = "Rclone command completed successfully." if return_code == 0 else f"Rclone command failed with exit code {return_code}."
+            
+            # Read full log for final output, as client will truncate for display
+            full_log_content = read_full_log(LOG_FILE)
 
-@app.route('/get_rclone_output/<process_id>', methods=['GET'])
-@login_required
-def get_rclone_output(process_id):
-    """Returns the output for a specific Rclone process."""
-    with rclone_lock:
-        if process_id not in active_rclone_processes:
-            return jsonify({"status": "error", "message": "Rclone process not found."}), 404
-        
-        process_info = active_rclone_processes[process_id]
-        log_content = read_full_log(process_info['log_file_path'])
-        is_running = process_info['process_obj'].poll() is None
-        current_status = process_info['status']
+            yield json.dumps({
+                "status": final_status,
+                "message": final_message,
+                "output": full_log_content # Send full log for final display (client can choose to truncate)
+            }) + '\n'
 
-        return jsonify({"status": "success", "output": log_content, "is_running": is_running, "process_status": current_status})
+        except FileNotFoundError:
+            yield json.dumps({"status": "error", "message": "Rclone executable not found. Ensure it's installed and in PATH."}) + '\n'
+        except Exception as e:
+            yield json.dumps({"status": "error", "message": f"An unexpected error occurred: {e}"}) + '\n'
+        finally:
+            with rclone_lock:
+                if rclone_process and rclone_process.poll() is None:
+                    # If process is still running after loop, ensure it's terminated
+                    rclone_process.terminate()
+                rclone_process = None # Clear the global process variable
 
+    return Response(generate_rclone_output(), mimetype='application/json-lines')
 
 @app.route('/stop-rclone-process', methods=['POST'])
 @login_required
 def stop_rclone_process():
-    """Terminates a specific active Rclone process by ID."""
-    process_id = request.get_json().get('process_id')
-
-    if not process_id:
-        return jsonify({"status": "error", "message": "No process ID provided."}), 400
-
+    """Terminates the active Rclone process."""
+    global rclone_process
     with rclone_lock:
-        if process_id in active_rclone_processes:
-            process_info = active_rclone_processes[process_id]
-            process_obj = process_info['process_obj']
-            stop_flag = process_info['stop_flag']
-
-            if process_obj.poll() is None: # If process is still running
-                stop_flag.set() # Signal the streaming thread to stop
-                process_obj.terminate() # Send SIGTERM
-                process_obj.wait(timeout=5) # Wait for process to terminate
-                if process_obj.poll() is None: # If still running after timeout, kill it
-                    process_obj.kill()
-                process_info['status'] = 'stopped' # Update status in our tracker
-                return jsonify({"status": "success", "message": f"Rclone process {process_id} (PID: {process_info['pid']}) stopped."})
-            else:
-                return jsonify({"status": "info", "message": f"Rclone process {process_id} (PID: {process_info['pid']}) is not running."})
-        return jsonify({"status": "error", "message": f"Rclone process {process_id} not found."}), 404
-
-@app.route('/list_active_rclone_processes', methods=['GET'])
-@login_required
-def list_active_rclone_processes():
-    """Returns a list of currently active (or recently completed) Rclone processes."""
-    with rclone_lock:
-        processes_for_frontend = []
-        for p_id, p_info in active_rclone_processes.items():
-            # Check if the process is still alive and update status if needed
-            if p_info['process_obj'].poll() is not None and p_info['status'] == 'running':
-                # Process has finished but status hasn't been updated by thread yet
-                if p_info['process_obj'].returncode == 0:
-                    p_info['status'] = 'completed'
-                else:
-                    p_info['status'] = 'failed'
-            
-            processes_for_frontend.append({
-                'process_id': p_id,
-                'command': p_info['command'],
-                'pid': p_info['pid'],
-                'status': p_info['status']
-            })
-        return jsonify({"status": "success", "processes": processes_for_frontend})
-
+        if rclone_process and rclone_process.poll() is None:
+            stop_rclone_flag.set() # Set the flag to signal termination
+            rclone_process.terminate() # Send SIGTERM
+            rclone_process.wait(timeout=5) # Wait for process to terminate
+            if rclone_process.poll() is None: # If still running after timeout, kill it
+                rclone_process.kill()
+            rclone_process = None
+            return jsonify({"status": "success", "message": "Rclone process stopped."})
+        return jsonify({"status": "info", "message": "No Rclone process is currently running."})
 
 @app.route('/download-rclone-log', methods=['GET'])
 @login_required
 def download_rclone_log():
-    """Allows downloading the full aggregated Rclone LOG_FILE as an attachment."""
+    """Allows downloading the full Rclone LOG_FILE as an attachment."""
     if os.path.exists(LOG_FILE):
         return Response(
             open(LOG_FILE, 'rb').read(),
             mimetype='text/plain',
-            headers={"Content-Disposition": f"attachment;filename=rclone_webgui_aggregated_log_{time.strftime('%Y%m%d-%H%M%S')}.txt"}
+            headers={"Content-Disposition": f"attachment;filename=rclone_webgui_log_{time.strftime('%Y%m%d-%H%M%S')}.txt"}
         )
-    return jsonify({"status": "error", "message": "Aggregated Rclone log file not found."}), 404
-
-@app.route('/download_rclone_process_log/<process_id>', methods=['GET'])
-@login_required
-def download_rclone_process_log(process_id):
-    """Allows downloading the log for a specific Rclone process."""
-    with rclone_lock:
-        if process_id not in active_rclone_processes:
-            return jsonify({"status": "error", "message": "Rclone process log not found."}), 404
-        
-        process_info = active_rclone_processes[process_id]
-        log_file_path = process_info['log_file_path']
-        command_name = process_info['command'].split(' ')[1] # e.g., 'sync' from 'rclone sync'
-
-        if os.path.exists(log_file_path):
-            return Response(
-                open(log_file_path, 'rb').read(),
-                mimetype='text/plain',
-                headers={"Content-Disposition": f"attachment;filename=rclone_{command_name}_log_{process_id}_{time.strftime('%Y%m%d-%H%M%S')}.txt"}
-            )
-        return jsonify({"status": "error", "message": "Specific Rclone process log file not found."}), 404
-
+    return jsonify({"status": "error", "message": "Rclone log file not found."}), 404
 
 # --- Web Terminal Functions ---
-def _stream_terminal_output_to_file(process_id, process_obj, aggregated_log_file_path):
-    """Internal function to stream subprocess output to the aggregated terminal log file."""
-    # Each terminal process will also have its own temporary log file for detailed viewing if needed
-    process_log_file = os.path.join('/tmp', f'terminal_process_log_{process_id}.txt')
-    clear_log(process_log_file) # Clear log before starting new stream
-
-    with terminal_lock:
-        if process_id in active_terminal_processes:
-            active_terminal_processes[process_id]['status'] = 'running'
-
-    try:
-        # Write command start to aggregated log
-        command_str = active_terminal_processes[process_id]['command']
-        write_to_log(aggregated_log_file_path, f"--- Terminal Command {process_id} (PID: {process_obj.pid}) Started: {command_str} ---")
-        
-        for line in iter(process_obj.stdout.readline, ''):
-            line_stripped = line.strip()
-            if line_stripped:
-                write_to_log(process_log_file, line_stripped) # Write to individual process log
-                write_to_log(aggregated_log_file_path, line_stripped) # Write to aggregated log
-
-            with terminal_lock: # Check stop flag from active_terminal_processes entry
-                if process_id in active_terminal_processes and active_terminal_processes[process_id]['stop_flag'].is_set():
-                    break
-
-        process_obj.wait()
-        return_code = process_obj.returncode
-        with terminal_lock:
-            if process_id in active_terminal_processes:
-                if active_terminal_processes[process_id]['stop_flag'].is_set():
-                    active_terminal_processes[process_id]['status'] = 'stopped'
-                    final_message = f"Terminal process {process_id} stopped by user."
-                elif return_code == 0:
-                    active_terminal_processes[process_id]['status'] = 'completed'
-                    final_message = f"Terminal process {process_id} completed successfully."
-                else:
-                    active_terminal_processes[process_id]['status'] = 'failed'
-                    final_message = f"Terminal process {process_id} failed with exit code {return_code}."
-                
-                # Write final status to aggregated log
-                write_to_log(aggregated_log_file_path, f"--- Terminal Command {process_id} ({active_terminal_processes[process_id]['status']}): {final_message} ---")
-                # Clean up process_obj and stop_flag after completion, but keep metadata for list
-                active_terminal_processes[process_id]['process_obj'] = None
-                active_terminal_processes[process_id]['stop_flag'] = None
-
-
-    except Exception as e:
-        with terminal_lock:
-            if process_id in active_terminal_processes:
-                active_terminal_processes[process_id]['status'] = 'failed'
-                write_to_log(aggregated_log_file_path, f"--- Terminal Command {process_id} Failed (Error): {e} ---")
-        print(f"Error streaming terminal output for {process_id}: {e}")
-    finally:
-        # Clean up individual process log file
-        if os.path.exists(process_log_file):
-            os.remove(process_log_file)
-
+def _stream_terminal_output_to_file(process, filename, stop_flag):
+    """Internal function to stream subprocess output to a file in a separate thread."""
+    clear_log(filename) # Clear log before starting new stream
+    for line in iter(process.stdout.readline, ''):
+        write_to_log(filename, line.strip())
+        if stop_flag.is_set():
+            break
+    process.wait() # Wait for the process to truly finish
 
 @app.route('/execute_terminal_command', methods=['POST'])
 @login_required
 def execute_terminal_command():
-    """Executes a terminal command in the background."""
+    """Executes a terminal command."""
+    global terminal_process
     command = request.get_json().get('command')
 
     if not command:
         return jsonify({"status": "error", "message": "No command provided."}), 400
 
-    process_id = str(time.time()) # Unique ID for this process
+    with terminal_lock:
+        if terminal_process and terminal_process.poll() is None:
+            # If a process is running, return conflict and current command
+            cmdline = " ".join(terminal_process.args) if isinstance(terminal_process.args, list) else terminal_process.args
+            return jsonify({
+                "status": "warning",
+                "message": "A terminal process is already running. Do you want to stop it and start a new one?",
+                "running_command": cmdline
+            }), 409 # Conflict status code
 
-    try:
-        # Create a new stop flag for this specific process
-        stop_current_process_flag = threading.Event()
-        
-        process_obj = subprocess.Popen(
-            command,
-            shell=True, # Allows executing shell commands directly
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, # Merge stdout and stderr
-            universal_newlines=True,
-            bufsize=1 # Line-buffered
-        )
+        # If a process was running and completed, clear its references
+        if terminal_process and terminal_process.poll() is not None:
+            terminal_process = None
 
-        with terminal_lock:
-            active_terminal_processes[process_id] = {
-                'process_obj': process_obj,
-                'command': command,
-                'pid': process_obj.pid,
-                'status': 'starting', # Will be updated to 'running' by the thread
-                'stop_flag': stop_current_process_flag # Store the specific stop flag
-            }
+        try:
+            stop_terminal_flag.clear() # Clear the stop flag for a new run
+            terminal_process = subprocess.Popen(
+                command,
+                shell=True, # Allows executing shell commands directly
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, # Merge stdout and stderr
+                universal_newlines=True,
+                bufsize=1 # Line-buffered
+            )
+            # Start a separate thread to consume output and write to log file
+            threading.Thread(
+                target=_stream_terminal_output_to_file,
+                args=(terminal_process, TERMINAL_LOG_FILE, stop_terminal_flag),
+                daemon=True # Daemon threads are terminated when the main program exits
+            ).start()
 
-        # Start a separate thread to consume output and write to log file
-        threading.Thread(
-            target=_stream_terminal_output_to_file,
-            args=(process_id, process_obj, TERMINAL_LOG_FILE),
-            daemon=True # Daemon threads are terminated when the main program exits
-        ).start()
-
-        return jsonify({"status": "success", "message": f"Command '{command}' started with PID {process_obj.pid}.", "process_id": process_id})
-    except Exception as e:
-        with terminal_lock:
-            if process_id in active_terminal_processes:
-                del active_terminal_processes[process_id] # Clean up if starting failed
-        return jsonify({"status": "error", "message": f"Failed to execute command: {e}"}), 500
+            return jsonify({"status": "success", "message": f"Command '{command}' started."})
+        except Exception as e:
+            # Ensure process is cleaned up if an error occurs during Popen
+            if terminal_process and terminal_process.poll() is None:
+                terminal_process.terminate()
+            terminal_process = None
+            return jsonify({"status": "error", "message": f"Failed to execute command: {e}"}), 500
 
 @app.route('/get_terminal_output', methods=['GET'])
 @login_required
 def get_terminal_output():
-    """Returns the full terminal output from the main aggregated log file and overall status."""
-    output_content = read_full_log(TERMINAL_LOG_FILE)
-    # Check if any terminal process is currently running
-    any_running = False
+    """Returns the full terminal output from the log file and process status."""
     with terminal_lock:
-        for p_info in active_terminal_processes.values():
-            if p_info['process_obj'] and p_info['process_obj'].poll() is None:
-                any_running = True
-                break
-    return jsonify({"status": "success", "output": output_content, "is_running": any_running})
+        # Check if the process is still running
+        is_running = terminal_process and terminal_process.poll() is None
+        # Read the full content of the log file
+        output_content = read_full_log(TERMINAL_LOG_FILE)
+        return jsonify({"status": "success", "output": output_content, "is_running": is_running})
 
 @app.route('/stop_terminal_process', methods=['POST'])
 @login_required
 def stop_terminal_process():
-    """Terminates a specific active terminal process by ID."""
-    process_id = request.get_json().get('process_id')
-
-    if not process_id:
-        # If no process_id is provided, try to stop the *last initiated* running process
-        # This is a fallback for the old frontend behavior if not updated to send process_id
-        with terminal_lock:
-            last_running_process_id = None
-            for p_id in reversed(list(active_terminal_processes.keys())):
-                p_info = active_terminal_processes[p_id]
-                if p_info['process_obj'] and p_info['process_obj'].poll() is None:
-                    last_running_process_id = p_id
-                    break
-            if last_running_process_id:
-                process_id = last_running_process_id
-            else:
-                return jsonify({"status": "info", "message": "No terminal process is currently running to stop."})
-
-
+    """Terminates any active terminal process."""
+    global terminal_process
     with terminal_lock:
-        if process_id in active_terminal_processes:
-            process_info = active_terminal_processes[process_id]
-            process_obj = process_info.get('process_obj')
-            stop_flag = process_info.get('stop_flag')
-
-            if process_obj and process_obj.poll() is None: # If process is still running
-                if stop_flag: # Signal the streaming thread to stop gracefully
-                    stop_flag.set() 
-                process_obj.terminate() # Send SIGTERM
-                process_obj.wait(timeout=5) # Wait for process to terminate
-                if process_obj.poll() is None: # If still running after timeout, kill it
-                    process_obj.kill()
-                process_info['status'] = 'stopped' # Update status
-                process_info['process_obj'] = None # Clear Popen object reference
-                process_info['stop_flag'] = None # Clear stop flag reference
-                return jsonify({"status": "success", "message": f"Terminal process {process_id} (PID: {process_info['pid']}) stopped."})
-            else:
-                return jsonify({"status": "info", "message": f"Terminal process {process_id} (PID: {process_info['pid']}) is not running or already completed."})
-        return jsonify({"status": "error", "message": f"Terminal process {process_id} not found."}), 404
-
-@app.route('/list_active_terminal_processes', methods=['GET'])
-@login_required
-def list_active_terminal_processes():
-    """Returns a list of currently active (or recently completed) terminal processes."""
-    with terminal_lock:
-        processes_for_frontend = []
-        for p_id, p_info in list(active_terminal_processes.items()): # Iterate on a copy
-            # Update status if process has finished but not yet updated by its thread
-            if p_info['process_obj'] and p_info['process_obj'].poll() is not None and p_info['status'] == 'running':
-                if p_info['process_obj'].returncode == 0:
-                    p_info['status'] = 'completed'
-                else:
-                    p_info['status'] = 'failed'
-                p_info['process_obj'] = None # Clean up reference
-                p_info['stop_flag'] = None # Clean up reference
-
-            processes_for_frontend.append({
-                'process_id': p_id,
-                'command': p_info['command'],
-                'pid': p_info['pid'],
-                'status': p_info['status']
-            })
-        return jsonify({"status": "success", "processes": processes_for_frontend})
+        if terminal_process and terminal_process.poll() is None:
+            stop_terminal_flag.set() # Set the flag to signal termination
+            terminal_process.terminate() # Send SIGTERM
+            terminal_process.wait(timeout=5) # Wait for process to terminate
+            if terminal_process.poll() is None: # If still running after timeout, kill it
+                terminal_process.kill()
+            terminal_process = None
+            return jsonify({"status": "success", "message": "Terminal process stopped."})
+        return jsonify({"status": "info", "message": "No terminal process is currently running."})
 
 @app.route('/download-terminal-log', methods=['GET'])
 @login_required
 def download_terminal_log():
-    """Allows downloading the full aggregated Terminal LOG_FILE as an attachment."""
+    """Allows downloading the full Terminal LOG_FILE as an attachment."""
     if os.path.exists(TERMINAL_LOG_FILE):
         return Response(
             open(TERMINAL_LOG_FILE, 'rb').read(),
             mimetype='text/plain',
-            headers={"Content-Disposition": f"attachment;filename=terminal_aggregated_log_{time.strftime('%Y%m%d-%H%M%S')}.txt"}
+            headers={"Content-Disposition": f"attachment;filename=terminal_log_{time.strftime('%Y%m%d-%H%M%S')}.txt"}
         )
-    return jsonify({"status": "error", "message": "Aggregated Terminal log file not found."}), 404
+    return jsonify({"status": "error", "message": "Terminal log file not found."}), 404
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=os.environ.get('PORT', 5000))
-
