@@ -420,32 +420,6 @@ def download_rclone_log():
     return jsonify({"status": "error", "message": "Rclone log file not found."}), 404
 
 # --- Web Terminal Functions ---
-def _stream_terminal_output_to_buffer(process, stop_flag):
-    """Internal function to stream subprocess output to log file."""
-    try:
-        for line in iter(process.stdout.readline, ''):
-            write_to_log(TERMINAL_LOG_FILE, line.strip())
-            if stop_flag.is_set():
-                # If stop flag is set, try to send SIGINT for graceful termination
-                if process.poll() is None:
-                    os.killpg(os.getpgid(process.pid), signal.SIGINT) # Send SIGINT to process group
-                    print(f"Sent SIGINT to terminal process {process.pid}")
-                break
-        process.wait(timeout=10) # Wait longer for graceful exit
-        if process.poll() is None: # If still running after timeout, send SIGKILL
-            process.kill()
-            print(f"Terminal process {process.pid} killed after timeout.")
-    except Exception as e:
-        print(f"Error streaming terminal output: {e}")
-    finally:
-        with terminal_lock:
-            # Ensure process reference is cleared after it's done or killed
-            if process and process.poll() is None:
-                process.terminate() # Fallback
-            global terminal_process
-            terminal_process = None
-
-
 @app.route('/execute_terminal_command', methods=['POST'])
 @login_required
 def execute_terminal_command():
@@ -652,6 +626,19 @@ def clear_all_user_data():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Failed to clear user data: {e}"}), 500
 
+# Helper function to read last N lines from a file (used for terminal output snippets)
+def read_last_n_lines(filepath, n):
+    """Reads the last n lines from a file."""
+    if not os.path.exists(filepath):
+        return []
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            # Read all lines and return the last n
+            lines = f.readlines()
+            return [line.strip() for line in lines[-n:]]
+    except Exception as e:
+        print(f"Error reading last {n} lines from {filepath}: {e}")
+        return []
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=os.environ.get('PORT', 5000))
