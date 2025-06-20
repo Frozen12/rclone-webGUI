@@ -5,45 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Rclone WebGUI</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Montserrat:wght@700&display=swap" rel="stylesheet">
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script>
-        // Immediately apply the theme from localStorage to prevent FOUC (Flash of Unstyled Content)
+        // Apply theme immediately to prevent flash of unstyled content
         (function() {
-            const theme = localStorage.getItem('theme') || 'theme-green-dark'; // Default theme
+            const theme = localStorage.getItem('theme') || 'dark-mode'; // Default to dark-mode
             document.documentElement.className = theme;
         })();
     </script>
     <style>
-        /* Specific styles for the login page */
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+        .login-card {
+            background-color: rgba(var(--card-bg-color-rgb), 0.85);
+            backdrop-filter: blur(10px);
         }
     </style>
 </head>
-<body class="bg-bg-color">
-    <div class="card bg-card-bg-color p-8 sm:p-12 rounded-2xl shadow-2xl w-full max-w-md mx-4">
-        <h1 class="main-title text-center mb-6">Rclone WebGUI Login</h1>
+<body class="flex flex-col justify-center items-center min-h-screen p-4">
+    <div class="background-shapes">
+        <div class="shape-1"></div>
+        <div class="shape-2"></div>
+        <div class="shape-3"></div>
+    </div>
+    <div class="login-card p-8 rounded-xl shadow-lg w-full max-w-md relative z-10 border border-border-color">
+        <h1 class="text-4xl font-bold text-center mb-6 app-title">Rclone WebGUI</h1>
         {% if error %}
-        <p class="error-message text-center mb-4 text-red-400 bg-red-500/10 p-3 rounded-lg">{{ error }}</p>
+        <p class="error-message text-center mb-4 p-2 bg-red-500/20 text-red-300 rounded-md">{{ error }}</p>
         {% endif %}
-        <form action="/login" method="post" class="space-y-6">
+        <form action="/login" method="post" class="space-y-4">
             <div>
-                <label for="username" class="block text-sm font-bold mb-2 text-primary-color">Username</label>
+                <label for="username" class="input-label">Username</label>
                 <input type="text" id="username" name="username" required
                        class="input-field w-full p-3 rounded-lg focus:ring-2 focus:ring-accent-color focus:border-transparent outline-none">
             </div>
             <div>
-                <label for="password" class="block text-sm font-bold mb-2 text-primary-color">Password</label>
+                <label for="password" class="input-label">Password</label>
                 <input type="password" id="password" name="password" required
                        class="input-field w-full p-3 rounded-lg focus:ring-2 focus:ring-accent-color focus:border-transparent outline-none">
             </div>
             <button type="submit"
-                    class="btn-primary w-full p-3 rounded-lg font-semibold text-lg hover:shadow-lg transition-shadow duration-300">
+                    class="btn-primary w-full p-3 rounded-lg font-semibold text-lg hover:shadow-md">
                 Log In
             </button>
         </form>
