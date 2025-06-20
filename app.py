@@ -9,6 +9,7 @@ from functools import wraps
 import zipfile
 import shutil
 import re
+import signal # Import signal module
 
 app = Flask(__name__)
 
@@ -303,20 +304,22 @@ def execute_rclone():
     # Generator function to stream output
     def generate_rclone_output():
         global rclone_process
-        global rclone_output_buffer
         full_output_lines = [] # Collect all lines for final output
 
         stop_rclone_flag.clear() # Clear the stop flag for a new run
 
         try:
             with rclone_lock:
+                # Use preexec_fn=os.setsid to make the child process a session leader
+                # This ensures that signals sent to the process group (like SIGTERM) are handled correctly.
                 rclone_process = subprocess.Popen(
                     cmd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT, # Merge stdout and stderr
                     universal_newlines=True,
                     bufsize=1, # Line-buffered
-                    env=rclone_env if mode not in ["version", "listremotes"] else os.environ.copy() # Only pass rclone_env for actual rclone operations
+                    env=rclone_env if mode not in ["version", "listremotes"] else os.environ.copy(), # Only pass rclone_env for actual rclone operations
+                    preexec_fn=os.setsid # Detach process from current process group
                 )
 
             if mode in ["version", "listremotes"]:
@@ -337,9 +340,12 @@ def execute_rclone():
                 # Existing streaming logic for other modes
                 for line in iter(rclone_process.stdout.readline, ''):
                     if stop_rclone_flag.is_set():
-                        rclone_process.terminate()
-                        yield json.dumps({"status": "stopped", "message": "Rclone process stopped by user."}) + '\n'
-                        break
+                        # If stop flag is set, send SIGINT (Ctrl+C) for graceful termination
+                        if rclone_process.poll() is None: # Only send if still running
+                            os.killpg(os.getpgid(rclone_process.pid), signal.SIGINT) # Send SIGINT to process group
+                            print(f"Sent SIGINT to Rclone process {rclone_process.pid}")
+                        yield json.dumps({"status": "stopped", "message": "Rclone process stopping gracefully..."}) + '\n'
+                        break # Exit the loop, process will be waited on in finally block
 
                     line_stripped = line.strip()
                     if line_stripped:
@@ -347,7 +353,11 @@ def execute_rclone():
                         yield json.dumps({"status": "progress", "output": line_stripped}) + '\n'
                         full_output_lines.append(line_stripped)
 
-                rclone_process.wait() # Ensure process finishes
+                rclone_process.wait(timeout=10) # Wait longer for graceful exit
+                if rclone_process.poll() is None: # If still running after timeout, send SIGKILL
+                    rclone_process.kill()
+                    print(f"Rclone process {rclone_process.pid} killed after timeout.")
+
                 return_code = rclone_process.returncode
                 final_status = "complete" if return_code == 0 else "error"
                 final_message = "Rclone command completed successfully." if return_code == 0 else f"Rclone command failed with exit code {return_code}."
@@ -367,7 +377,7 @@ def execute_rclone():
         finally:
             with rclone_lock:
                 if rclone_process and rclone_process.poll() is None:
-                    rclone_process.terminate() # Ensure process is terminated if loop breaks early
+                    rclone_process.terminate() # Fallback, should be handled by loop if stop_flag set
                 rclone_process = None # Clear the global process variable
 
     return Response(generate_rclone_output(), mimetype='application/json-lines')
@@ -375,17 +385,14 @@ def execute_rclone():
 @app.route('/stop-rclone-process', methods=['POST'])
 @login_required
 def stop_rclone_process():
-    """Terminates the active Rclone process."""
+    """Terminates the active Rclone process gracefully."""
     global rclone_process
     with rclone_lock:
         if rclone_process and rclone_process.poll() is None:
-            stop_rclone_flag.set() # Set the flag to signal termination
-            rclone_process.terminate() # Send SIGTERM
-            rclone_process.wait(timeout=5) # Wait for process to terminate
-            if rclone_process.poll() is None: # If still running after timeout, kill it
-                rclone_process.kill()
-            rclone_process = None
-            return jsonify({"status": "success", "message": "Rclone process stopped."})
+            stop_rclone_flag.set() # Set the flag to signal termination in the streaming thread
+            # The streaming thread will now send SIGINT and wait.
+            # We don't send terminate/kill here directly, let the streaming thread manage it.
+            return jsonify({"status": "success", "message": "Rclone process stop signal sent. Waiting for graceful termination."})
         return jsonify({"status": "info", "message": "No Rclone process is currently running."})
 
 @app.route('/download-rclone-log', methods=['GET']) # Renamed from /download-logs
@@ -411,8 +418,16 @@ def _stream_terminal_output_to_buffer(process, buffer, stop_flag):
                 buffer.pop(0)
         write_to_log(TERMINAL_LOG_FILE, line.strip())
         if stop_flag.is_set():
+            # If stop flag is set, try to send SIGINT for graceful termination
+            if process.poll() is None:
+                os.killpg(os.getpgid(process.pid), signal.SIGINT) # Send SIGINT to process group
+                print(f"Sent SIGINT to terminal process {process.pid}")
             break
-    process.wait() # Wait for the process to truly finish
+    process.wait(timeout=10) # Wait longer for graceful exit
+    if process.poll() is None: # If still running after timeout, send SIGKILL
+        process.kill()
+        print(f"Terminal process {process.pid} killed after timeout.")
+
 
 @app.route('/execute_terminal_command', methods=['POST'])
 @login_required
@@ -429,7 +444,7 @@ def execute_terminal_command():
             return jsonify({
                 "status": "warning",
                 "message": "A terminal process is already running. Do you want to stop it and start a new one?",
-                "running_command": terminal_process.args # Show the current command
+                "running_command": ' '.join(terminal_process.args) if isinstance(terminal_process.args, list) else terminal_process.args # Show the current command more reliably
             }), 409 # Conflict status code
 
         # If a process was running and completed, clear its references
@@ -447,11 +462,12 @@ def execute_terminal_command():
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
-                bufsize=1 # Line-buffered
+                bufsize=1, # Line-buffered
+                preexec_fn=os.setsid # Detach process from current process group
             )
             # Start a separate thread to consume output
             threading.Thread(
-                target=_stream_terminal_output_to_buffer, # Corrected: colon changed to comma
+                target=_stream_terminal_output_to_buffer,
                 args=(terminal_process, terminal_output_buffer, stop_terminal_flag),
                 daemon=True # Daemon threads are terminated when the main program exits
             ).start()
@@ -474,17 +490,14 @@ def get_terminal_output():
 @app.route('/stop_terminal_process', methods=['POST'])
 @login_required
 def stop_terminal_process():
-    """Terminates any active terminal process."""
+    """Terminates any active terminal process gracefully."""
     global terminal_process
     with terminal_lock:
         if terminal_process and terminal_process.poll() is None:
-            stop_terminal_flag.set() # Set the flag to signal termination
-            terminal_process.terminate() # Send SIGTERM
-            terminal_process.wait(timeout=5) # Wait for process to terminate
-            if terminal_process.poll() is None: # If still running after timeout, kill it
-                terminal_process.kill()
-            terminal_process = None
-            return jsonify({"status": "success", "message": "Terminal process stopped."})
+            stop_terminal_flag.set() # Set the flag to signal termination in the streaming thread
+            # The streaming thread will now send SIGINT and wait.
+            # We don't send terminate/kill here directly, let the streaming thread manage it.
+            return jsonify({"status": "success", "message": "Terminal process stop signal sent. Waiting for graceful termination."})
         return jsonify({"status": "info", "message": "No terminal process is currently running."})
 
 @app.route('/download-terminal-log', methods=['GET'])
