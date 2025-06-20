@@ -174,7 +174,7 @@ def upload_sa_zip():
                 zip_ref.extractall(SERVICE_ACCOUNT_DIR) # This extracts into /app/.config/rclone/
 
             os.remove(zip_path) # Clean up the temporary zip file
-            return jsonify({"status": "success", "message": f"Service account ZIP extracted to {SERVICE_CONFIG_DIR}. Existing JSONs cleared."})
+            return jsonify({"status": "success", "message": f"Service account ZIP extracted to {SERVICE_ACCOUNT_DIR}. Existing JSONs cleared."})
         except zipfile.BadZipFile:
             return jsonify({"status": "error", "message": "Invalid ZIP file."}), 400
         except Exception as e:
@@ -433,7 +433,7 @@ def execute_terminal_command():
             )
             # Start a separate thread to consume output
             threading.Thread(
-                target:_stream_terminal_output_to_buffer,
+                target=_stream_terminal_output_to_buffer, # Corrected: colon changed to comma
                 args=(terminal_process, terminal_output_buffer, stop_terminal_flag),
                 daemon=True # Daemon threads are terminated when the main program exits
             ).start()
