@@ -14,6 +14,14 @@
     <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore-compat.js"></script>
+    <script>
+        // Apply saved theme immediately on page load to prevent flash
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark-mode';
+            document.documentElement.className = savedTheme; // Apply to html for global variables
+            document.body.className = savedTheme; // Apply to body for fallback/compatibility
+        })();
+    </script>
 </head>
 <body class="flex flex-col min-h-screen">
     <!-- Header -->
@@ -106,7 +114,7 @@
             <div id="rclone-transfer-section" class="content-section card p-6 rounded-xl shadow-md active">
                 <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center">
                     <i class="fas fa-exchange-alt mr-3"></i> Rclone Transfer
-                    <div id="rclone-spinner" class="section-title-spinner hidden"></div>
+                    <div id="rclone-spinner" class="section-title-spinner"></div> <!-- Spinner moved here -->
                 </h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -246,7 +254,7 @@
             <div id="web-terminal-section" class="content-section card p-6 rounded-xl shadow-md hidden">
                 <h2 class="text-2xl font-bold mb-4 text-primary-color flex items-center">
                     <i class="fas fa-terminal mr-3"></i> Web Terminal
-                    <div id="terminal-spinner" class="section-title-spinner hidden"></div>
+                    <div id="terminal-spinner" class="section-title-spinner"></div> <!-- Spinner moved here -->
                 </h2>
 
                 <div class="mb-4">
