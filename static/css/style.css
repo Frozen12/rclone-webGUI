@@ -375,18 +375,31 @@ body {
     box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.4);
 }
 
-/* Spinner directly next to the title (within the h2 flex container) */
-.section-title-spinner {
-    margin-left: 1rem;
-    border: 3px solid var(--border-color);
-    border-top: 3px solid var(--accent-color);
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    animation: spin 1s linear infinite;
-    display: none; /* Hidden by default */
+/* Spinner Overlay */
+.spinner-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(var(--card-bg-color-rgb), 0.95);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-radius: 0.75rem;
+    z-index: 10;
+    backdrop-filter: blur(3px);
 }
 
+.spinner {
+    border: 4px solid var(--border-color);
+    border-top: 4px solid var(--accent-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
 
 @keyframes spin {
     0% { transform: rotate(0deg); }
@@ -527,12 +540,6 @@ header {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Theme Dropdown Opacity */
-#themeDropdown {
-    background-color: rgba(var(--card-bg-color-rgb), 0.75); /* 75% opacity */
-}
-
-
 /* For better mobile experience */
 @media (max-width: 768px) {
     main {
@@ -561,38 +568,40 @@ header {
         margin-left: 0;
         margin-top: 0.5rem;
     }
-    /* Adjusted header for mobile */
-    header {
-        flex-direction: column; /* Stack header items vertically */
-        align-items: flex-start; /* Align items to the left */
-        padding: 1rem; /* Adjust padding for smaller screens */
+    header .flex-wrap {
+        flex-direction: column;
+        align-items: flex-start;
     }
-
-    header .flex.items-center:first-child { /* Contains SVG and App Title */
-        width: 100%; /* Take full width */
-        justify-content: space-between; /* Space out title and right-aligned button container */
-        margin-bottom: 0.5rem; /* Add some space below this row */
+    header .space-x-4 {
+        margin-top: 1rem;
+        width: 100%;
+        justify-content: space-between;
     }
-
-    header .flex.items-center.space-x-4 { /* Contains User ID, Theme, and Logout buttons */
-        width: 100%; /* Take full width */
+    /* Mobile specific adjustments for logout and theme buttons */
+    header .btn-danger { /* Logout button */
+        padding: 0.5rem 1rem; /* Smaller padding */
+        font-size: 0.8rem; /* Smaller font size */
+        width: auto; /* Allow content to dictate width */
+    }
+    header .btn-secondary { /* Theme button */
+        padding: 0.5rem 1rem; /* Smaller padding */
+        font-size: 0.8rem; /* Smaller font size */
+        width: auto; /* Allow content to dictate width */
+    }
+    header .items-center { /* Container for theme and logout buttons */
+        display: flex;
+        flex-direction: row; /* Keep them in a row */
         justify-content: flex-end; /* Align to the right */
-        margin-top: 0; /* Remove default top margin */
-        order: 1; /* Ensure this row appears after the title/SVG row */
+        width: 100%;
+        margin-top: 1rem; /* Add some margin from the title */
     }
-
     header .app-title {
-        font-size: 2.2rem; /* Adjusted title size for mobile header */
+        font-size: 2.5rem; /* Relatively larger on mobile header */
+        text-align: left;
+        width: 100%;
     }
-
-    header .btn-danger,
-    header .btn-secondary { /* Logout button and Theme button */
-        padding: 0.5rem 0.8rem; /* Smaller padding for mobile buttons */
-        font-size: 0.75rem; /* Smaller font size for mobile buttons */
-        flex-shrink: 0; /* Prevent shrinking */
-    }
-    /* Ensure userId and buttons are spaced on mobile */
-    header .space-x-4 > *:not(:first-child) {
-        margin-left: 0.5rem; /* Reduced space between buttons */
+    header > div:first-child { /* The div containing the SVG and app title */
+        width: 100%; /* Take full width on mobile */
+        justify-content: center; /* Center the title */
     }
 }
